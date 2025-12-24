@@ -1,3 +1,4 @@
+// index.js
 const express = require('express');
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
 
@@ -10,12 +11,11 @@ const WL_CHANNEL_ID = process.env.WL_CHANNEL_ID;
 const RESULT_CHANNEL_ID = process.env.RESULT_CHANNEL_ID;
 const PORT = process.env.PORT || 3000;
 
-// --- Discord client ---
+// --- Discord client (sin MessageContent) ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.GuildMessages
   ]
 });
 
