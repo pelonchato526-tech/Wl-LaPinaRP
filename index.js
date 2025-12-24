@@ -20,7 +20,7 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public')); // Logo aquí
+app.use(express.static('public')); // Aquí va tu logo.png
 
 // --- Preguntas WL ---
 const preguntas = [
@@ -48,20 +48,20 @@ app.get('/', (req,res)=>{
       <style>
         body { background:#000; color:#fff; font-family:Arial; text-align:center; margin-top:50px; }
         h1 { color:#FFD700; font-size:48px; }
-        p { font-size:22px; max-width:600px; margin:auto; }
+        p { font-size:22px; }
         button { padding:15px 30px; background:#FFD700; color:#000; border:none; border-radius:8px; cursor:pointer; font-size:24px; margin:10px; }
         button:hover { background:#e6c200; }
         #logo { width:200px; margin-bottom:30px; }
-        footer { margin-top:50px; color:#aaa; font-size:14px; }
+        #footer { margin-top:50px; font-size:14px; color:#888; }
       </style>
     </head>
     <body>
       <img id="logo" src="/logo.png" alt="Piña RP"/>
       <h1>Piña RP - WL Discord</h1>
-      <p>Lee cuidadosamente las instrucciones antes de comenzar tu WL.<br>
-      Tienes 15 minutos para completar todas las preguntas. Una vez enviada, no podrás modificar tu WL.</p>
+      <p>Lee cuidadosamente las instrucciones antes de comenzar tu WL.</p>
+      <p>Recuerda: Solo puedes enviar tu WL una vez.</p>
       <a href="${oauthLink}"><button>Conectar con Discord y Comenzar</button></a>
-      <footer>© 2025 La Piña RP | Todos los derechos reservados</footer>
+      <div id="footer">© 2025 La Piña RP</div>
     </body>
     </html>
   `);
@@ -97,7 +97,7 @@ app.get('/callback', async (req,res)=>{
     const discordId = userData.id;
     const username = userData.username;
 
-    // --- Página formulario paso a paso ---
+    // --- Página formulario interactivo paso a paso ---
     res.send(`
       <html>
       <head>
@@ -110,48 +110,39 @@ app.get('/callback', async (req,res)=>{
           button:hover { background:#e6c200; }
           #question { font-size:22px; margin-top:20px; }
           input { width:400px; padding:10px; margin-top:10px; border-radius:6px; border:none; font-size:18px; }
-          #timer { font-size:20px; margin-top:20px; color:#FF5555; }
-          footer { margin-top:40px; color:#aaa; font-size:14px; }
+          #timer { font-size:20px; margin-top:15px; color:#FFD700; }
+          #footer { margin-top:50px; font-size:14px; color:#888; }
         </style>
       </head>
       <body>
         <img id="logo" src="/logo.png"/>
         <h1>WL Formulario - ${username}</h1>
+        <div id="timer">Tiempo restante: 15:00</div>
         <div id="form-container">
           <p id="instructions">Presiona el botón "Comenzar" para iniciar el formulario. Solo podrás enviar tu WL una vez.</p>
           <button id="startBtn">Comenzar</button>
-          <div id="timer">Tiempo restante: 15:00</div>
         </div>
-        <footer>© 2025 La Piña RP | Todos los derechos reservados</footer>
+        <div id="footer">© 2025 La Piña RP</div>
         <script>
           const preguntas = ${JSON.stringify(preguntas)};
           let current = 0;
           const respuestas = [];
           const discordId = "${discordId}";
-          let tiempo = 15*60; // 15 minutos en segundos
           const container = document.getElementById('form-container');
-          const timerEl = document.getElementById('timer');
           const startBtn = document.getElementById('startBtn');
 
-          let interval;
-          startBtn.onclick = ()=>{
-            startTimer();
-            showQuestion();
-          };
+          // Contador 15 minutos
+          let tiempo = 900; // 900 segundos
+          const timerEl = document.getElementById('timer');
+          let timerInterval = setInterval(()=>{
+            if(tiempo<=0){ clearInterval(timerInterval); container.innerHTML="<p>⏰ Tiempo expirado</p>"; return; }
+            let min = Math.floor(tiempo/60);
+            let sec = tiempo%60;
+            timerEl.innerText = "Tiempo restante: "+min.toString().padStart(2,'0')+":"+sec.toString().padStart(2,'0');
+            tiempo--;
+          },1000);
 
-          function startTimer(){
-            interval = setInterval(()=>{
-              let min = Math.floor(tiempo/60);
-              let sec = tiempo % 60;
-              timerEl.textContent = \`Tiempo restante: \${min.toString().padStart(2,'0')}:\${sec.toString().padStart(2,'0')}\`;
-              tiempo--;
-              if(tiempo<0){
-                clearInterval(interval);
-                alert("Tiempo terminado! Tu WL no se pudo enviar.");
-                container.innerHTML = "<p>Tiempo agotado!</p>";
-              }
-            },1000);
-          }
+          startBtn.onclick = ()=>{ showQuestion(); };
 
           function showQuestion(){
             container.innerHTML = \`
@@ -159,7 +150,6 @@ app.get('/callback', async (req,res)=>{
               <input type="text" id="answer" required/>
               <br/>
               <button id="nextBtn">Listo</button>
-              <div id="timer">\${timerEl.textContent}</div>
             \`;
 
             document.getElementById('nextBtn').onclick = ()=>{
@@ -170,7 +160,6 @@ app.get('/callback', async (req,res)=>{
               if(current < preguntas.length){
                 showQuestion();
               }else{
-                clearInterval(interval);
                 submitWL();
               }
             };
@@ -185,6 +174,7 @@ app.get('/callback', async (req,res)=>{
             });
             const data = await res.json();
             container.innerHTML = "<p>" + (data.status==='ok'?'✅ WL enviada con éxito!':'❌ Error') + "</p>";
+            clearInterval(timerInterval);
           }
         </script>
       </body>
@@ -250,12 +240,14 @@ client.on(Events.InteractionCreate, async interaction=>{
     .setTitle(action==='accept'?'✅ WL Aceptada':'❌ WL Rechazada')
     .setDescription(`<@${discordId}> ${action==='accept'?'fue aceptado':'fue rechazado'} a Piña RP!`)
     .setColor(action==='accept'?'#00FF00':'#FF0000')
-    .setImage(action==='accept'?'https://i.giphy.com/media/26FPy3QZQqGtDcrja/giphy.gif':'https://i.giphy.com/media/3o6Zt481isNVuQI1l6/giphy.gif');
+    .setImage(
+      action==='accept'
+      ? 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnJhMjd3bmp3dnU5dDYyZDExcXNpNWI3OXJjY3MwOXBrOHlzajhiayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/IgUASPYFJ5DjRMs2xx/giphy.gif'
+      : 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2dqNjQxNTBibzUzbmpjanpnMnZhcXg2aWVncXkwN3V6ZGc3eHAyMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/vaxN3AaED9UZ6GyCpg/giphy.gif'
+    );
 
   // Enviar DM al usuario
-  try{
-    await member.send({ embeds:[embed] });
-  }catch(e){}
+  member.send({ embeds:[embed] }).catch(()=>null);
 
   await resultChannel.send({ embeds:[embed] });
   await interaction.update({ content: action==='accept'?'✅ WL aceptada':'❌ WL rechazada', components:[], embeds:interaction.message.embeds });
