@@ -15,7 +15,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public')); // Para logo.png
+app.use(express.static('public')); // logo.png
 
 // Página principal
 app.get('/', (req, res) => {
@@ -26,12 +26,14 @@ app.get('/', (req, res) => {
       <title>WL Piña RP</title>
       <style>
         body { background:#000; color:#fff; font-family: Arial; text-align:center; margin-top:50px; }
-        h1 { color:#FFD700; }
-        button { padding:10px 20px; background:#FFD700; color:#000; border:none; border-radius:5px; cursor:pointer; }
+        h1 { color:#FFD700; font-size:48px; }
+        button { padding:15px 30px; background:#FFD700; color:#000; border:none; border-radius:8px; cursor:pointer; font-size:24px; }
         button:hover { background:#e6c200; }
+        #logo { width:200px; margin-bottom:30px; }
       </style>
     </head>
     <body>
+      <img id="logo" src="/logo.png" alt="Piña RP"/>
       <h1>Piña RP - WL Discord</h1>
       <a href="${oauthLink}"><button>Conectar con Discord</button></a>
     </body>
@@ -39,35 +41,27 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Callback OAuth2
+// Callback OAuth2 y formulario
 app.get('/callback', async (req,res)=>{
   try{
     const code = req.query.code;
     if(!code) return res.send("No se recibió código OAuth2");
 
-    // Petición a Discord para obtener access_token
-    const params = new URLSearchParams();
-    params.append('client_id', CLIENT_ID);
-    params.append('grant_type','authorization_code');
-    params.append('code', code);
-    params.append('redirect_uri','https://wl-discord.onrender.com/callback');
-
-    // Para simplificar, vamos a usar el code como ID temporal
+    // Simulación de usuario
     const discordId = code.slice(0,18);
     const username = `Usuario-${discordId.slice(-4)}`;
 
-    // Formulario WL
     const preguntas = [
       "Nombre completo en Discord",
       "Edad",
-      "¿Tiempo jugando RP?",
-      "¿Qué rol deseas hacer?",
+      "Tiempo jugando RP",
+      "Rol que deseas hacer",
       "Experiencia en MG",
       "Experiencia en PG",
-      "¿Has sido sancionado antes?",
-      "¿Cómo describirías tu estilo RP?",
-      "¿Disponibilidad de horario?",
-      "¿Por qué quieres unirte a Piña RP?",
+      "Sanciones previas",
+      "Estilo RP",
+      "Disponibilidad de horario",
+      "Por qué quieres unirte a Piña RP",
       "Describe tu personaje",
       "Algo más que quieras añadir"
     ];
@@ -78,25 +72,25 @@ app.get('/callback', async (req,res)=>{
         <title>WL Piña RP</title>
         <style>
           body { background:#000; color:#fff; font-family: Arial; text-align:center; margin:20px; }
-          h1 { color:#FFD700; }
-          label { display:block; margin-top:10px; }
-          input { width:300px; padding:8px; margin:5px; border-radius:5px; border:none; }
-          button { padding:10px 20px; background:#FFD700; color:#000; border:none; border-radius:5px; cursor:pointer; margin-top:15px; }
+          h1 { color:#FFD700; font-size:36px; }
+          label { display:block; margin-top:15px; font-size:20px; }
+          input { width:400px; padding:10px; margin:5px; border-radius:6px; border:none; font-size:18px; }
+          button { padding:12px 25px; background:#FFD700; color:#000; border:none; border-radius:6px; cursor:pointer; font-size:20px; margin-top:20px; }
           button:hover { background:#e6c200; }
-          #logo { width:150px; margin-bottom:20px; }
-          #timer { font-size:18px; color:#FFD700; margin-bottom:20px; }
+          #logo { width:180px; margin-bottom:20px; }
+          #timer { font-size:24px; color:#FFD700; margin-bottom:20px; }
         </style>
       </head>
       <body>
         <img id="logo" src="/logo.png" alt="Piña RP"/>
-        <h1>Formulario WL - ${username}</h1>
+        <h1>WL Formulario - ${username}</h1>
         <div id="timer">Tiempo restante: <span id="time">20:00</span></div>
         <form id="wlForm">
           ${preguntas.map((p,i)=>`<label>${p}: <input type="text" id="p${i+1}" required/></label>`).join('')}
           <input type="hidden" id="discordId" value="${discordId}"/>
           <button type="submit">Enviar WL</button>
         </form>
-        <p id="status"></p>
+        <p id="status" style="font-size:22px; margin-top:15px;"></p>
         <script>
           let timeLeft=1200;
           const timerEl=document.getElementById('time');
@@ -137,10 +131,13 @@ app.post('/wl-form', async(req,res)=>{
     if(!discordId||!respuestas) return res.status(400).json({error:'Faltan datos'});
 
     const wlChannel = await client.channels.fetch(WL_CHANNEL_ID);
+
+    // Mención antes del embed
+    await wlChannel.send(`<@${discordId}> envió su WL:`);
+
     const embed = new EmbedBuilder()
       .setTitle('📄 Nueva WL enviada')
       .setDescription(respuestas)
-      .setFooter({text:`Usuario: <@${discordId}>`})
       .setColor('#FFD700')
       .setThumbnail('https://i.imgur.com/tuLogo.png');
 
