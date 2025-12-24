@@ -1,8 +1,7 @@
-// index.js
 const express = require('express');
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
 
-// --- Variables de entorno directamente desde Render ---
+// --- Variables de entorno desde Render ---
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -25,7 +24,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Página principal con tu OAuth2
+// Página principal con OAuth2
 app.get('/', (req, res) => {
   const oauthLink = 'https://discord.com/oauth2/authorize?client_id=1453271207490355284&response_type=code&redirect_uri=https%3A%2F%2Fwl-discord.onrender.com%2Fcallback&scope=identify+guilds';
   res.send(`
@@ -49,16 +48,12 @@ app.get('/', (req, res) => {
   `);
 });
 
-// --- Callback OAuth2 ---
+// Callback OAuth2
 app.get('/callback', async (req, res) => {
   try {
     const code = req.query.code;
     if (!code) return res.send('No se recibió código OAuth2');
-
-    // Solo mostramos mensaje de éxito, no intercambiamos token para simplificar
     res.send('<h2>Autenticación completada! Ahora puedes enviar tu WL.</h2>');
-
-    // Enviar mensaje al canal de resultados opcional
     const resultChannel = await client.channels.fetch(RESULT_CHANNEL_ID);
     await resultChannel.send('📌 Un usuario se autenticó vía OAuth2');
   } catch (err) {
@@ -67,22 +62,19 @@ app.get('/callback', async (req, res) => {
   }
 });
 
-// --- Endpoint WL-form ---
+// Endpoint WL-form
 app.post('/wl-form', async (req, res) => {
   try {
     const { discordId, respuestas } = req.body;
     if (!discordId || !respuestas) return res.status(400).json({ error: 'Faltan datos' });
 
     const wlChannel = await client.channels.fetch(WL_CHANNEL_ID);
-
-    // Embed con respuestas
     const embed = new EmbedBuilder()
       .setTitle('📄 Nueva WL enviada')
       .setDescription(respuestas)
       .setFooter({ text: `Usuario: ${discordId}` })
       .setColor('#7289da');
 
-    // Botones Aceptar / Rechazar
     const row = new ActionRowBuilder()
       .addComponents(
         new ButtonBuilder()
@@ -103,10 +95,9 @@ app.post('/wl-form', async (req, res) => {
   }
 });
 
-// --- Bot escucha interacción de botones ---
+// Bot escucha interacción de botones
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
-
   const resultChannel = await client.channels.fetch(RESULT_CHANNEL_ID);
   const [action, discordId] = interaction.customId.split('_');
 
@@ -119,12 +110,12 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// --- Bot listo ---
+// Bot listo
 client.on('ready', () => {
   console.log(`Bot listo! ${client.user.tag}`);
 });
 
 client.login(TOKEN);
 
-// --- Iniciar server ---
+// Iniciar server
 app.listen(PORT, () => console.log(`Servidor web corriendo en puerto ${PORT}`));
