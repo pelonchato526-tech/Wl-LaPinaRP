@@ -1,19 +1,16 @@
 {
-  "name": "wl-lapina-rp",
+  "name": "wl-lapinarp",
   "version": "1.0.0",
-  "description": "WL Piña RP Discord Integration",
+  "description": "Whitelist La Piña RP",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": "22.x"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "discord.js": "^14.12.0",
-    "node-fetch": "^3.3.2",
-    "cookie-parser": "^1.4.6"
+    "express": "^4.19.2",
+    "discord.js": "^14.15.3"
   }
 }
