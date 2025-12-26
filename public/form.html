@@ -2,26 +2,23 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Whitelist</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formulario WL</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
+<header>
+  <img src="logo.png" alt="Logo LaPinaRP">
+</header>
 <div class="card">
-  <img src="logo.png" class="logo">
-  <h2>Whitelist La Piña RP</h2>
-
-  <div id="intro">
-    <p>Tenés 3 intentos. Cambiar de pestaña cancela.</p>
-    <button onclick="start()">Comenzar</button>
-  </div>
-
-  <form id="form" style="display:none">
-    <div id="questions"></div>
+  <h2>Formulario WL</h2>
+  <form id="wlForm">
+    <div id="questionsContainer"></div>
+    <p>Tiempo restante: <span id="timer">10:00</span></p>
     <button type="submit">Enviar WL</button>
   </form>
 </div>
+<footer>© La Piña RP - Todos los derechos reservados</footer>
 
 <script src="script.js"></script>
 </body>
