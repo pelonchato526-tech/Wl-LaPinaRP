@@ -1,29 +1,59 @@
 body {
-  background: linear-gradient(135deg,#111,#222);
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #1e1e1e, #3b3b3b);
   color: white;
-  font-family: Arial;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  min-height: 100vh;
+}
+
+header {
+  text-align: center;
+  padding: 20px;
+}
+
+header img {
+  max-width: 200px;
+  margin-bottom: 10px;
 }
 
 .card {
-  background: #000000cc;
-  padding: 20px;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 500px;
-  text-align: center;
+  background: linear-gradient(135deg, #2c2c2c, #444);
+  border-radius: 15px;
+  padding: 30px;
+  margin-top: 20px;
+  width: 90%;
+  max-width: 600px;
+  text-align: left;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-.logo {
-  width: 120px;
-  margin-bottom: 10px;
+button {
+  background: #ff6f00;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+button:hover {
+  background: #ffa000;
 }
 
 input, textarea {
   width: 100%;
-  margin: 6px 0;
-  padding: 8px;
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 8px;
+  border: none;
+  margin-bottom: 15px;
+}
+
+footer {
+  margin-top: 50px;
+  text-align: center;
+  font-size: 12px;
 }
