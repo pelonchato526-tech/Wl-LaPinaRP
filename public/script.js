@@ -1,103 +1,69 @@
-// script.js
+const preguntas = document.querySelectorAll('.pregunta');
+const barra = document.getElementById('barra');
+const temporizador = document.getElementById('temporizador');
+const btnComenzar = document.getElementById('btnComenzar');
+const instrucciones = document.getElementById('instrucciones');
 
-let currentQuestion = 0;
 let respuestas = [];
-let timer;
-let tiempoRestante = 15 * 60; // 15 minutos en segundos
-let wlCancelada = false;
-
-const formContainer = document.getElementById('form-container');
-const timerDiv = document.getElementById('timer');
-const startBtn = document.getElementById('startBtn');
+let index = 0;
+let tiempo = 300; // 5 min por WL
+let timerInterval;
+let intentos = 0;
+let discordId = localStorage.getItem('discordId'); // Guardado tras OAuth
 
 function startTimer() {
-  timerDiv.textContent = formatTime(tiempoRestante);
-  timer = setInterval(() => {
-    tiempoRestante--;
-    timerDiv.textContent = formatTime(tiempoRestante);
-    if (tiempoRestante <= 0) {
-      clearInterval(timer);
-      cancelarWL('Tiempo agotado');
-    }
-  }, 1000);
+  timerInterval = setInterval(() => {
+    tiempo--;
+    const min = Math.floor(tiempo/60);
+    const seg = tiempo%60;
+    temporizador.textContent = `${min}:${seg<10?'0'+seg:seg}`;
+    if(tiempo<=0) cancelWL();
+  },1000);
 }
 
-function formatTime(segundos) {
-  const min = Math.floor(segundos / 60);
-  const sec = segundos % 60;
-  return `Tiempo restante: ${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+function cancelWL() {
+  clearInterval(timerInterval);
+  alert('WL cancelada por tiempo o cambio de página.');
+  intentos++;
+  if(intentos>=3){
+    alert('Has alcanzado el máximo de intentos.');
+    btnComenzar.disabled = true;
+  } else {
+    location.reload();
+  }
 }
 
-function cancelarWL(reason) {
-  wlCancelada = true;
-  clearInterval(timer);
-  formContainer.innerHTML = `<p>WL cancelada: ${reason}</p>`;
-}
-
-// Cancelar si cambias de pestaña o refrescas
-window.addEventListener('beforeunload', (e) => {
-  if(!wlCancelada) cancelarWL('Se cambió de página');
+window.addEventListener('beforeunload', e=>{
+  if(index>0) cancelWL();
 });
 
-document.addEventListener('visibilitychange', () => {
-  if(document.hidden && !wlCancelada){
-    cancelarWL('Se cambió de pestaña');
-  }
-});
-
-function mostrarPregunta() {
-  if(currentQuestion >= preguntas.length){
-    enviarWL();
+btnComenzar.addEventListener('click', ()=>{
+  if(!discordId){
+    alert('No estás autorizado.');
     return;
   }
-
-  const q = preguntas[currentQuestion];
-  formContainer.innerHTML = `
-    <p><strong>Pregunta ${currentQuestion+1}:</strong> ${q}</p>
-    <textarea id="respuesta" rows="3" style="width:100%"></textarea>
-    <br><button id="nextBtn">Siguiente</button>
-    <div class="barra-progreso">
-      <div class="relleno" style="width:${Math.floor((currentQuestion/preguntas.length)*100)}%"></div>
-    </div>
-  `;
-
-  document.getElementById('nextBtn').addEventListener('click', () => {
-    const resp = document.getElementById('respuesta').value.trim();
-    respuestas.push(resp || 'No respondida');
-    currentQuestion++;
-    mostrarPregunta();
-  });
-}
-
-async function enviarWL() {
-  try {
-    formContainer.innerHTML = `<p>Enviando WL...</p>`;
-    clearInterval(timer);
-
-    const res = await fetch('/wl-form', {
-      method: 'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ discordId, respuestas })
-    });
-
-    const data = await res.json();
-    if(data.error){
-      formContainer.innerHTML = `<p>❌ Error: ${data.error}</p>`;
-      return;
-    }
-
-    formContainer.innerHTML = `<p>✅ WL enviada correctamente. Espera tu resultado en Discord.</p>`;
-  } catch(err){
-    console.error(err);
-    formContainer.innerHTML = `<p>❌ Error interno al enviar WL.</p>`;
-  }
-}
-
-startBtn.addEventListener('click', ()=>{
-  if(usuariosWL && usuariosWL[discordId] && usuariosWL[discordId].respondido){
-    formContainer.innerHTML = `<p>Ya enviaste tu WL. Espera tu resultado.</p>`;
-    return;
-  }
+  instrucciones.style.display='none';
+  document.getElementById('formWL').style.display='block';
   startTimer();
-  mostrarPregunta();
+});
+
+document.getElementById('formWL').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const inputs = document.querySelectorAll('.respuesta');
+  respuestas = Array.from(inputs).map(i=>i.value);
+  barra.style.width = '100%';
+
+  const res = await fetch('/wl-form',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ discordId, respuestas })
+  });
+  const data = await res.json();
+  if(data.error){
+    alert(data.error);
+    return;
+  }
+  alert('WL enviada!');
+  clearInterval(timerInterval);
+  btnComenzar.disabled = true;
 });
