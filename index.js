@@ -73,7 +73,7 @@ app.get("/", (req, res) => {
 });
 
 // --- Callback OAuth2 ---
-app.get("/callback", async (req, res) => {
+app.get("https://discord.com/oauth2/authorize?client_id=1453271207490355284&response_type=code&redirect_uri=https%3A%2F%2Fwl-discord.onrender.com%2Fcallback&scope=identify+guilds+email+openid", async (req, res) => {
   try {
     const code = req.query.code;
     if (!code) return res.send("❌ No se recibió código OAuth2");
