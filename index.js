@@ -46,7 +46,7 @@ const preguntas = [
   "¿Qué significa valorar la vida?"
 ];
 
-// Página de inicio
+// Página inicio: primero OAuth2
 app.get('/', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -73,8 +73,7 @@ app.get('/', (req, res) => {
 <body>
   <img id="logo" src="/logo.png">
   <h1>Whitelist La Piña RP</h1>
-  <p>Lee las instrucciones antes de comenzar.</p>
-  <p>Solo puedes enviar la WL una vez.</p>
+  <p>Para continuar, primero conecta tu cuenta de Discord.</p>
   <a href="${OAUTH_URL}">
     <button>Conectar con Discord</button>
   </a>
@@ -88,7 +87,7 @@ app.get('/', (req, res) => {
 app.get('/callback', async (req, res) => {
   try {
     const code = req.query.code;
-    if (!code) return res.send('❌ Error: no se recibió código OAuth2');
+    if (!code) return res.redirect('/'); // Si no hay código, vuelve al inicio
 
     const params = new URLSearchParams();
     params.append('client_id', '1453271207490355284');
@@ -105,7 +104,7 @@ app.get('/callback', async (req, res) => {
     });
 
     const token = await tokenRes.json();
-    if (token.error) return res.send('❌ Error OAuth2');
+    if (token.error) return res.redirect('/');
 
     const userRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${token.access_token}` }
@@ -113,6 +112,7 @@ app.get('/callback', async (req, res) => {
 
     const user = await userRes.json();
 
+    // Mostrar instrucciones y WL
     res.send(`
 <!DOCTYPE html>
 <html>
@@ -129,6 +129,7 @@ app.get('/callback', async (req, res) => {
 <body>
   <img id="logo" src="/logo.png">
   <h1>Formulario WL - ${user.username}</h1>
+  <p>Lee las instrucciones y responde todas las preguntas.</p>
   <div id="timer">Tiempo restante: 15:00</div>
   <div id="app"></div>
 
@@ -189,7 +190,7 @@ mostrar();
 `);
   } catch (e) {
     console.error(e);
-    res.send('❌ Error interno');
+    res.redirect('/');
   }
 });
 
