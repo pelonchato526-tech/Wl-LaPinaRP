@@ -1,45 +1,80 @@
-const preguntas = [...]; // Array de preguntas
+const urlParams = new URLSearchParams(window.location.search);
+const discordId = urlParams.get('discordId');
+const username = urlParams.get('username');
+
+if(!discordId || !username){
+  window.location.href = '/';
+}
+
+const preguntas = [
+  "¿Qué es el MetaGaming (MG)?",
+  "Si mueres y reapareces en el hospital (PK), ¿qué debes hacer?",
+  "¿Qué es el PowerGaming (PG)?",
+  "Te están atracando con un arma en la cabeza. ¿Cómo actúas?",
+  "¿Qué significa OOC (Out Of Character)?",
+  "¿Qué es el VDM (Vehicle Deathmatch)?",
+  "¿Cuál es el procedimiento si ves a alguien incumpliendo las normas?",
+  "¿Qué es el Combat Logging?",
+  "¿Qué es el Bunny Jump?",
+  "¿Está permitido hablar de temas de la vida real por el chat de voz?",
+  "¿Qué es el RDM (Random Deathmatch)?",
+  "¿Qué significa 'Valorar la vida'?"
+];
+
 let index = 0;
-let respuestas = [];
+const respuestas = [];
 let tiempo = 900;
-const timerEl = document.getElementById('timer');
-const progressBar = document.getElementById('progress');
+const app = document.getElementById('app');
 
-function updateProgress() {
-  const porcentaje = ((index) / preguntas.length) * 100;
-  progressBar.style.width = porcentaje + '%';
-}
-
-function showQuestion() {
-  if(index === 0) startTimer();
-  updateProgress();
-
-  // Renderiza pregunta + input
-  const container = document.getElementById('form-container');
-  container.innerHTML = `
-    <div id="question">${preguntas[index]}</div>
-    <input type="text" id="answer" placeholder="Escribe tu respuesta...">
-    <button id="nextBtn">Listo</button>
-    <div class="progress-container"><div class="progress-bar" id="progress"></div></div>
+function startForm(){
+  app.innerHTML = `
+    <img src="/logo.png" class="logo">
+    <h1>WL Formulario - ${username}</h1>
+    <div id="timer">Tiempo restante: 15:00</div>
+    <div id="progress-bar"></div>
+    <div id="question-container">
+      <p id="question">${preguntas[index]}</p>
+      <textarea id="answer" placeholder="Escribe tu respuesta..."></textarea>
+      <button class="btn" id="nextBtn">Siguiente</button>
+    </div>
   `;
-  document.getElementById('nextBtn').onclick = nextQuestion;
+  iniciarTimer();
+  document.getElementById('nextBtn').onclick = siguientePregunta;
 }
 
-function nextQuestion() {
-  const val = document.getElementById('answer').value.trim();
-  if(!val) return alert("Debes responder");
-  respuestas.push(val);
-  index++;
-  if(index < preguntas.length) showQuestion();
-  else submitWL();
-}
-
-function startTimer() {
+function iniciarTimer(){
+  const timerEl = document.getElementById('timer');
   const interval = setInterval(()=>{
-    if(tiempo <=0){ clearInterval(interval); alert("⏰ Tiempo expirado"); return; }
-    const min = Math.floor(tiempo/60);
-    const sec = tiempo%60;
-    timerEl.innerText = `Tiempo restante: ${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
     tiempo--;
+    const m = String(Math.floor(tiempo/60)).padStart(2,'0');
+    const s = String(tiempo%60).padStart(2,'0');
+    timerEl.innerText = `Tiempo restante: ${m}:${s}`;
+    if(tiempo<=0){ clearInterval(interval); app.innerHTML="<h1>⏰ Tiempo agotado</h1>"; }
   },1000);
 }
+
+function siguientePregunta(){
+  const val = document.getElementById('answer').value.trim();
+  if(!val){ alert("Debes responder"); return; }
+  respuestas.push(val);
+  index++;
+  if(index < preguntas.length){
+    document.getElementById('question').innerText = preguntas[index];
+    document.getElementById('answer').value = "";
+  } else {
+    enviarWL();
+  }
+}
+
+async function enviarWL(){
+  app.innerHTML = "<h1>Enviando WL...</h1>";
+  const res = await fetch('/wl-form',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({discordId,respuestas})
+  });
+  const data = await res.json();
+  app.innerHTML = `<h1>${data.status==='ok'?'✅ WL enviada correctamente':'❌ Error'}</h1>`;
+}
+
+startForm();
