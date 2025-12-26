@@ -1,261 +1,240 @@
 // index.js
 const express = require('express');
 const fetch = require('node-fetch');
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
+const {
+  Client,
+  GatewayIntentBits,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  Events
+} = require('discord.js');
 
 const TOKEN = process.env.DISCORD_TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const GUILD_ID = process.env.GUILD_ID;
 const WL_CHANNEL_ID = process.env.WL_CHANNEL_ID;
 const RESULT_CHANNEL_ID = process.env.RESULT_CHANNEL_ID;
 const PORT = process.env.PORT || 3000;
 
-// Roles de aceptación/rechazo
+// ROLES
 const ROLE_ACCEPTED = '1453469378178846740';
 const ROLE_REJECTED = '1453469439306760276';
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages] });
-const app = express();
+// OAUTH FIJO (EL BUENO)
+const OAUTH_URL =
+  'https://discord.com/oauth2/authorize?client_id=1427423357565014056&response_type=code&redirect_uri=https%3A%2F%2Fwl-discord.onrender.com%2Fcallback&scope=identify+guilds+email+openid';
 
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages
+  ]
+});
+
+const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public')); // Aquí va tu logo.png
+app.use(express.static('public')); // logo.png
 
-// --- Preguntas WL ---
+// PREGUNTAS WL
 const preguntas = [
   "¿Qué es el MetaGaming (MG)?",
-  "Si mueres y reapareces en el hospital (PK), ¿qué debes hacer?",
-  "¿Qué es el PowerGaming (PG)?",
-  "Te están atracando con un arma en la cabeza. ¿Cómo actúas?",
-  "¿Qué significa OOC (Out Of Character)?",
-  "¿Qué es el VDM (Vehicle Deathmatch)?",
-  "¿Cuál es el procedimiento si ves a alguien incumpliendo las normas?",
-  "¿Qué es el Combat Logging?",
-  "¿Qué es el Bunny Jump?",
-  "¿Está permitido hablar de temas de la vida real (fútbol, política, clima real) por el chat de voz del juego?",
-  "¿Qué es el RDM (Random Deathmatch)?",
-  "¿Qué significa 'Valorar la vida'?"
+  "Si mueres y reapareces en hospital (PK), ¿qué haces?",
+  "¿Qué es PowerGaming (PG)?",
+  "Te apuntan con un arma, ¿cómo reaccionas?",
+  "¿Qué significa OOC?",
+  "¿Qué es VDM?",
+  "¿Qué haces si alguien rompe reglas?",
+  "¿Qué es Combat Logging?",
+  "¿Qué es Bunny Jump?",
+  "¿Se permiten temas OOC por voz?",
+  "¿Qué es RDM?",
+  "¿Qué es valorar la vida?"
 ];
 
-// --- Página principal con instrucciones ---
-app.get('/', (req,res)=>{
-  const oauthLink = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=https%3A%2F%2Fwl-discord.onrender.com%2Fcallback&scope=identify+guilds`;
+// HOME
+app.get('/', (req, res) => {
   res.send(`
+  <html>
+  <head>
+    <title>WL Piña RP</title>
+    <style>
+      body { background:#000; color:#fff; font-family:Arial; text-align:center; margin-top:40px; }
+      h1 { color:#FFD700; font-size:46px; }
+      p { font-size:20px; }
+      button { padding:15px 35px; background:#FFD700; border:none; border-radius:8px; font-size:22px; cursor:pointer; }
+      button:hover { background:#e6c200; }
+      img { width:200px; margin-bottom:25px; }
+      footer { margin-top:50px; color:#777; font-size:14px; }
+    </style>
+  </head>
+  <body>
+    <img src="/logo.png">
+    <h1>Piña RP - Whitelist</h1>
+    <p>Lee las instrucciones antes de iniciar.</p>
+    <p>⏱️ Tienes 15 minutos para completar la WL.</p>
+    <a href="${OAUTH_URL}"><button>Conectar con Discord</button></a>
+    <footer>© 2025 La Piña RP</footer>
+  </body>
+  </html>
+  `);
+});
+
+// CALLBACK OAUTH
+app.get('/callback', async (req, res) => {
+  try {
+    const code = req.query.code;
+    if (!code) return res.send('❌ No se recibió código OAuth2');
+
+    const params = new URLSearchParams();
+    params.append('client_id', '1427423357565014056');
+    params.append('client_secret', CLIENT_SECRET);
+    params.append('grant_type', 'authorization_code');
+    params.append('code', code);
+    params.append('redirect_uri', 'https://wl-discord.onrender.com/callback');
+
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      body: params,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+
+    const tokenData = await tokenRes.json();
+    if (tokenData.error) return res.send('❌ Error OAuth');
+
+    const userRes = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+    });
+
+    const user = await userRes.json();
+
+    res.send(`
     <html>
     <head>
       <title>WL Piña RP</title>
       <style>
-        body { background:#000; color:#fff; font-family:Arial; text-align:center; margin-top:50px; }
-        h1 { color:#FFD700; font-size:48px; }
-        p { font-size:22px; }
-        button { padding:15px 30px; background:#FFD700; color:#000; border:none; border-radius:8px; cursor:pointer; font-size:24px; margin:10px; }
-        button:hover { background:#e6c200; }
-        #logo { width:200px; margin-bottom:30px; }
-        #footer { margin-top:50px; font-size:14px; color:#888; }
+        body { background:#000; color:#fff; font-family:Arial; text-align:center; }
+        h2 { color:#FFD700; }
+        input { width:400px; padding:10px; border-radius:6px; border:none; font-size:18px; }
+        button { padding:12px 30px; background:#FFD700; border:none; border-radius:6px; font-size:18px; margin-top:15px; cursor:pointer; }
+        #timer { margin-top:10px; font-size:20px; color:#FFD700; }
+        footer { margin-top:40px; color:#777; font-size:14px; }
       </style>
     </head>
     <body>
-      <img id="logo" src="/logo.png" alt="Piña RP"/>
-      <h1>Piña RP - WL Discord</h1>
-      <p>Lee cuidadosamente las instrucciones antes de comenzar tu WL.</p>
-      <p>Recuerda: Solo puedes enviar tu WL una vez.</p>
-      <a href="${oauthLink}"><button>Conectar con Discord y Comenzar</button></a>
-      <div id="footer">© 2025 La Piña RP</div>
+      <h2>WL - ${user.username}</h2>
+      <div id="timer">15:00</div>
+      <div id="box">
+        <button onclick="start()">Comenzar WL</button>
+      </div>
+      <footer>© 2025 La Piña RP</footer>
+
+      <script>
+        const preguntas = ${JSON.stringify(preguntas)};
+        let i = 0;
+        let respuestas = [];
+        let tiempo = 900;
+
+        const box = document.getElementById('box');
+        const timer = document.getElementById('timer');
+
+        setInterval(() => {
+          if (tiempo <= 0) {
+            box.innerHTML = "⏰ Tiempo agotado";
+            return;
+          }
+          tiempo--;
+          let m = Math.floor(tiempo / 60);
+          let s = tiempo % 60;
+          timer.innerText = \`\${m.toString().padStart(2,'0')}:\${s.toString().padStart(2,'0')}\`;
+        }, 1000);
+
+        function start() {
+          mostrar();
+        }
+
+        function mostrar() {
+          box.innerHTML = \`
+            <p>\${preguntas[i]}</p>
+            <input id="r">
+            <br>
+            <button onclick="next()">Siguiente</button>
+          \`;
+        }
+
+        async function next() {
+          const r = document.getElementById('r').value;
+          if (!r) return alert("Responde la pregunta");
+          respuestas.push(r);
+          i++;
+          if (i < preguntas.length) {
+            mostrar();
+          } else {
+            box.innerHTML = "Enviando WL...";
+            await fetch('/wl-form', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ id: "${user.id}", respuestas })
+            });
+            box.innerHTML = "✅ WL enviada con éxito";
+          }
+        }
+      </script>
     </body>
     </html>
-  `);
-});
-
-// --- Callback OAuth2 ---
-app.get('/callback', async (req,res)=>{
-  try {
-    const code = req.query.code;
-    if(!code) return res.send("No se recibió código OAuth2");
-
-    const params = new URLSearchParams();
-    params.append('client_id', CLIENT_ID);
-    params.append('client_secret', CLIENT_SECRET);
-    params.append('grant_type','authorization_code');
-    params.append('code', code);
-    params.append('redirect_uri','https://wl-discord.onrender.com/callback');
-
-    const tokenRes = await fetch('https://discord.com/api/oauth2/token',{
-      method:'POST',
-      body: params,
-      headers:{ 'Content-Type':'application/x-www-form-urlencoded' }
-    });
-
-    const tokenData = await tokenRes.json();
-    if(tokenData.error) return res.send(`Error OAuth2: ${tokenData.error_description}`);
-
-    const userRes = await fetch('https://discord.com/api/users/@me',{
-      headers:{ Authorization: `Bearer ${tokenData.access_token}` }
-    });
-
-    const userData = await userRes.json();
-    const discordId = userData.id;
-    const username = userData.username;
-
-    // --- Página formulario interactivo paso a paso ---
-    res.send(`
-      <html>
-      <head>
-        <title>WL Piña RP</title>
-        <style>
-          body { background:#000; color:#fff; font-family:Arial; text-align:center; margin:20px; }
-          h1 { color:#FFD700; font-size:36px; }
-          #logo { width:180px; margin-bottom:20px; }
-          button { padding:12px 25px; background:#FFD700; color:#000; border:none; border-radius:6px; cursor:pointer; font-size:20px; margin-top:20px; }
-          button:hover { background:#e6c200; }
-          #question { font-size:22px; margin-top:20px; }
-          input { width:400px; padding:10px; margin-top:10px; border-radius:6px; border:none; font-size:18px; }
-          #timer { font-size:20px; margin-top:15px; color:#FFD700; }
-          #footer { margin-top:50px; font-size:14px; color:#888; }
-        </style>
-      </head>
-      <body>
-        <img id="logo" src="/logo.png"/>
-        <h1>WL Formulario - ${username}</h1>
-        <div id="timer">Tiempo restante: 15:00</div>
-        <div id="form-container">
-          <p id="instructions">Presiona el botón "Comenzar" para iniciar el formulario. Solo podrás enviar tu WL una vez.</p>
-          <button id="startBtn">Comenzar</button>
-        </div>
-        <div id="footer">© 2025 La Piña RP</div>
-        <script>
-          const preguntas = ${JSON.stringify(preguntas)};
-          let current = 0;
-          const respuestas = [];
-          const discordId = "${discordId}";
-          const container = document.getElementById('form-container');
-          const startBtn = document.getElementById('startBtn');
-
-          // Contador 15 minutos
-          let tiempo = 900; // 900 segundos
-          const timerEl = document.getElementById('timer');
-          let timerInterval = setInterval(()=>{
-            if(tiempo<=0){ clearInterval(timerInterval); container.innerHTML="<p>⏰ Tiempo expirado</p>"; return; }
-            let min = Math.floor(tiempo/60);
-            let sec = tiempo%60;
-            timerEl.innerText = "Tiempo restante: "+min.toString().padStart(2,'0')+":"+sec.toString().padStart(2,'0');
-            tiempo--;
-          },1000);
-
-          startBtn.onclick = ()=>{ showQuestion(); };
-
-          function showQuestion(){
-            container.innerHTML = \`
-              <div id="question">\${preguntas[current]}</div>
-              <input type="text" id="answer" required/>
-              <br/>
-              <button id="nextBtn">Listo</button>
-            \`;
-
-            document.getElementById('nextBtn').onclick = ()=>{
-              const val = document.getElementById('answer').value.trim();
-              if(!val){ alert("Debes responder"); return; }
-              respuestas.push(val);
-              current++;
-              if(current < preguntas.length){
-                showQuestion();
-              }else{
-                submitWL();
-              }
-            };
-          }
-
-          async function submitWL(){
-            container.innerHTML = "<p>Enviando WL...</p>";
-            const res = await fetch('/wl-form',{
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({discordId,respuestas})
-            });
-            const data = await res.json();
-            container.innerHTML = "<p>" + (data.status==='ok'?'✅ WL enviada con éxito!':'❌ Error') + "</p>";
-            clearInterval(timerInterval);
-          }
-        </script>
-      </body>
-      </html>
     `);
 
-  } catch(err){
-    console.error(err);
-    res.send("Error interno");
+  } catch (e) {
+    console.error(e);
+    res.send('Error interno');
   }
 });
 
-// --- Endpoint WL-form ---
-app.post('/wl-form', async (req,res)=>{
-  try {
-    const { discordId,respuestas } = req.body;
-    if(!discordId || !respuestas) return res.status(400).json({ error:'Faltan datos' });
+// WL FORM
+app.post('/wl-form', async (req, res) => {
+  const { id, respuestas } = req.body;
+  const channel = await client.channels.fetch(WL_CHANNEL_ID);
 
-    const wlChannel = await client.channels.fetch(WL_CHANNEL_ID);
-
-    // Mención fuera del embed
-    await wlChannel.send(`<@${discordId}> envió su WL:`);
-
-    const embed = new EmbedBuilder()
-      .setTitle('📄 Nueva WL enviada')
-      .setDescription(respuestas.map((r,i)=>`\n**Pregunta ${i+1}:** ${r}`).join(''))
-      .setColor('#FFD700')
-      .setThumbnail('https://i.imgur.com/tuLogo.png'); // GIF o logo
-
-    const row = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder().setCustomId(`accept_${discordId}`).setLabel('✅ Aceptar').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`reject_${discordId}`).setLabel('❌ Rechazar').setStyle(ButtonStyle.Danger)
-      );
-
-    await wlChannel.send({ embeds:[embed], components:[row] });
-    res.json({ status:'ok' });
-
-  } catch(err){
-    console.error(err);
-    res.status(500).json({ error:'Error interno' });
-  }
-});
-
-// --- Bot botones ---
-client.on(Events.InteractionCreate, async interaction=>{
-  if(!interaction.isButton()) return;
-
-  const [action, discordId] = interaction.customId.split('_');
-  const guild = await client.guilds.fetch(GUILD_ID);
-  const member = await guild.members.fetch(discordId).catch(()=>null);
-  if(!member) return;
-
-  const resultChannel = await client.channels.fetch(RESULT_CHANNEL_ID);
-
-  if(action==='accept'){
-    await member.roles.add(ROLE_ACCEPTED).catch(()=>null);
-  } else if(action==='reject'){
-    await member.roles.add(ROLE_REJECTED).catch(()=>null);
-  }
+  await channel.send(`<@${id}> envió su WL:`);
 
   const embed = new EmbedBuilder()
-    .setTitle(action==='accept'?'✅ WL Aceptada':'❌ WL Rechazada')
-    .setDescription(`<@${discordId}> ${action==='accept'?'fue aceptado':'fue rechazado'} a La Piña RP!`)
-    .setColor(action==='accept'?'#00FF00':'#FF0000')
-    .setImage(
-      action==='accept'
-      ? 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnJhMjd3bmp3dnU5dDYyZDExcXNpNWI3OXJjY3MwOXBrOHlzajhiayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/IgUASPYFJ5DjRMs2xx/giphy.gif'
-      : 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2dqNjQxNTBibzUzbmpjanpnMnZhcXg2aWVncXkwN3V6ZGc3eHAyMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/vaxN3AaED9UZ6GyCpg/giphy.gif'
-    );
+    .setTitle('📄 Nueva WL')
+    .setDescription(respuestas.map((r,i)=>`**${i+1}.** ${r}`).join('\n'))
+    .setColor('#FFD700');
 
-  // Enviar DM al usuario
-  member.send({ embeds:[embed] }).catch(()=>null);
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`accept_${id}`).setLabel('Aceptar').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`reject_${id}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
+  );
 
-  await resultChannel.send({ embeds:[embed] });
-  await interaction.update({ content: action==='accept'?'✅ WL aceptada':'❌ WL rechazada', components:[], embeds:interaction.message.embeds });
+  await channel.send({ embeds:[embed], components:[row] });
+  res.json({ ok:true });
 });
 
-// --- Bot listo ---
-client.on('ready', ()=>console.log(`Bot listo! ${client.user.tag}`));
-client.login(TOKEN);
+// BOTONES
+client.on(Events.InteractionCreate, async i => {
+  if (!i.isButton()) return;
+  const [action, id] = i.customId.split('_');
+  const guild = await client.guilds.fetch(GUILD_ID);
+  const member = await guild.members.fetch(id);
 
-// --- Servidor ---
-app.listen(PORT, ()=>console.log(`Servidor corriendo en puerto ${PORT}`));
+  if (action === 'accept') await member.roles.add(ROLE_ACCEPTED);
+  if (action === 'reject') await member.roles.add(ROLE_REJECTED);
+
+  const embed = new EmbedBuilder()
+    .setTitle(action === 'accept' ? 'WL Aceptada' : 'WL Rechazada')
+    .setColor(action === 'accept' ? '#00FF00' : '#FF0000')
+    .setImage(
+      action === 'accept'
+        ? 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnJhMjd3bmp3dnU5dDYyZDExcXNpNWI3OXJjY3MwOXBrOHlzajhiayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/IgUASPYFJ5DjRMs2xx/giphy.gif'
+        : 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2dqNjQxNTBibzUzbmpjanpnMnZhcXg2aWVncXkwN3V6ZGc3eHAyMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/vaxN3AaED9UZ6GyCpg/giphy.gif'
+    );
+
+  await i.update({ embeds:[embed], components:[] });
+});
+
+client.login(TOKEN);
+app.listen(PORT, () => console.log('Servidor ON'));
