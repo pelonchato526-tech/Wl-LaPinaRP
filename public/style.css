@@ -29,7 +29,8 @@ body {
 
 #logo {
   width: 180px;
-  margin-bottom: 20px;
+  margin: 0 auto 20px auto;
+  display: block;
 }
 
 h1 {
@@ -80,14 +81,15 @@ input[type="text"] {
   width: 0;
   background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
   border-radius: 6px;
-  animation: fill 0.3s forwards;
-}
-
-@keyframes fill {
-  from { width: 0; }
-  to { width: 100%; }
+  transition: width 0.3s ease;
 }
 
 #formContainer h2 {
   margin-top: 20px;
+}
+
+#timer {
+  font-size: 18px;
+  color: #FFD700;
+  margin-bottom: 10px;
 }
