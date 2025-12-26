@@ -1,54 +1,48 @@
 const params = new URLSearchParams(location.search);
 const uid = params.get("uid");
-const name = params.get("name");
-
-if (!uid) document.body.innerHTML = "No autorizado";
-
-document.getElementById("user").innerText = name;
 
 const questions = [
-  "¿Qué es MG?",
-  "¿Qué es PG?",
-  "¿Qué es RDM?",
-  "¿Qué es VDM?",
-  "¿Qué es valorar la vida?"
+"¿Qué es el MetaGaming (MG)?",
+"Si mueres y reapareces (PK), ¿qué haces?",
+"¿Qué es PowerGaming (PG)?",
+"Te atracan con un arma, ¿cómo actúas?",
+"¿Qué es OOC?",
+"¿Qué es VDM?",
+"¿Qué haces si ves a alguien rompiendo reglas?",
+"¿Qué es Combat Logging?",
+"¿Qué es Bunny Jump?",
+"¿Se puede hablar de la vida real por voz?",
+"¿Qué es RDM?",
+"¿Qué significa valorar la vida?"
 ];
 
-let i = 0;
-let answers = [];
-let time = 900;
+const qDiv = document.getElementById("questions");
 
-const q = document.getElementById("q");
-const a = document.getElementById("a");
-const p = document.getElementById("progress");
-const t = document.getElementById("timer");
+function start() {
+  document.getElementById("intro").style.display = "none";
+  document.getElementById("form").style.display = "block";
 
-q.innerText = questions[i];
+  fetch("/start", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({discordId:uid})
+  });
 
-setInterval(() => {
-  time--;
-  t.innerText = `Tiempo: ${Math.floor(time/60)}:${time%60}`;
-  if (time <= 0) location.reload();
-}, 1000);
+  questions.forEach((q,i)=>{
+    qDiv.innerHTML += `<p>${q}</p><textarea required></textarea>`;
+  });
+}
 
-document.getElementById("next").onclick = async () => {
-  if (!a.value) return;
-  answers.push(a.value);
-  a.value = "";
-  i++;
-  p.style.width = `${(i / questions.length) * 100}%`;
+document.getElementById("form").onsubmit = async e => {
+  e.preventDefault();
+  const answers = [...document.querySelectorAll("textarea")].map(t=>t.value);
 
-  if (i >= questions.length) {
-    const r = await fetch("/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ discordId: uid, answers })
-    });
-    const j = await r.json();
-    document.body.innerHTML = j.ok ? "WL enviada" : j.error;
-  } else {
-    q.innerText = questions[i];
-  }
+  const r = await fetch("/submit", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({discordId:uid, answers})
+  });
+
+  const j = await r.json();
+  if (j.ok) alert("WL enviada");
 };
-
-window.onblur = () => location.reload();
