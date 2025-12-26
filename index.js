@@ -1,4 +1,5 @@
 const express = require('express');
+const fetch = require('node-fetch'); // Node 18+ puede usar fetch global
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
 
 const TOKEN = process.env.DISCORD_TOKEN;
@@ -20,7 +21,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// Preguntas WL
+// Preguntas
 const preguntas = [
   "¿Qué es el MetaGaming (MG)?",
   "Si mueres y reapareces en el hospital (PK), ¿qué debes hacer?",
@@ -38,7 +39,6 @@ const preguntas = [
 
 // --- Página inicio ---
 app.get('/', (req,res)=>{
-  const oauthLink = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=https%3A%2F%2Fwl-discord.onrender.com%2Fcallback&scope=identify+guilds+email+openid`;
   res.sendFile(__dirname + '/index.html');
 });
 
@@ -67,8 +67,9 @@ app.get('/callback', async (req,res)=>{
       headers:{ Authorization: `Bearer ${tokenData.access_token}` }
     });
     const userData = await userRes.json();
+    const discordId = userData.id;
 
-    res.sendFile(__dirname + '/index.html'); // Carga el HTML con script.js
+    res.sendFile(__dirname + '/index.html'); // ahora script.js obtendrá discordId dinámico
   } catch(err){
     console.error(err);
     res.send("❌ Error interno");
@@ -82,7 +83,7 @@ app.post('/wl-form', async (req,res)=>{
     if(!discordId || !respuestas) return res.status(400).json({ error:'Faltan datos' });
 
     const wlChannel = await client.channels.fetch(WL_CHANNEL_ID);
-    await wlChannel.send(`<@${discordId}> envió su WL:`);
+    await wlChannel.send(`<@${discordId}> envió su WL:`); // mención correcta
 
     const embed = new EmbedBuilder()
       .setTitle('📄 Nueva WL enviada')
@@ -96,7 +97,6 @@ app.post('/wl-form', async (req,res)=>{
       );
 
     await wlChannel.send({ embeds:[embed], components:[row] });
-
     const resultChannel = await client.channels.fetch(RESULT_CHANNEL_ID);
     await resultChannel.send({ embeds:[embed] });
 
@@ -110,6 +110,7 @@ app.post('/wl-form', async (req,res)=>{
 // --- Bot botones ---
 client.on(Events.InteractionCreate, async interaction=>{
   if(!interaction.isButton()) return;
+
   const [action, discordId] = interaction.customId.split('_');
   const guild = await client.guilds.fetch(GUILD_ID);
   const member = await guild.members.fetch(discordId).catch(()=>null);
