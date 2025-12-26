@@ -1,14 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const fetch = require('node-fetch');
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
 const cookieParser = require('cookie-parser');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
 app.use(cookieParser());
+app.use(express.static('public'));
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -33,7 +33,24 @@ const client = new Client({
   ]
 });
 
-// OAuth2 Callback
+// --- RUTA INICIO ---
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>La Piña RP</title>
+      </head>
+      <body>
+        <h1>Whitelist La Piña RP</h1>
+        <a href="${OAUTH_URL}">
+          <button>Conectar con Discord y Comenzar</button>
+        </a>
+      </body>
+    </html>
+  `);
+});
+
+// --- CALLBACK OAUTH2 ---
 app.get('/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.redirect('/');
@@ -60,25 +77,39 @@ app.get('/callback', async (req, res) => {
     });
     const user = await userRes.json();
 
-    res.cookie('discordId', user.id, { maxAge: 600000, httpOnly: true });
-    res.sendFile(__dirname + '/public/index.html');
+    // Guardar Discord ID en cookie
+    res.cookie('discordId', user.id, { maxAge: 3600000, httpOnly: true });
+
+    // Redirigir al formulario WL
+    res.redirect('/wl');
   } catch (err) {
     console.error(err);
     res.redirect('/');
   }
 });
 
-// Endpoint WL
+// --- RUTA WL (FORMULARIO) ---
+app.get('/wl', (req, res) => {
+  const discordId = req.cookies.discordId;
+  if (!discordId) return res.redirect('/');
+
+  res.sendFile(__dirname + '/public/index.html');
+});
+
+// --- ENDPOINT WL ---
 app.post('/wl-form', async (req, res) => {
-  const { discordId, respuestas } = req.body;
-  if (enviados.has(discordId)) return res.json({ ok:false, mensaje:"Ya enviaste tu WL" });
+  const { respuestas } = req.body;
+  const discordId = req.cookies.discordId;
+
+  if (!discordId) return res.json({ ok: false, mensaje: 'No autorizado' });
+  if (enviados.has(discordId)) return res.json({ ok: false, mensaje: 'Ya enviaste la WL' });
   enviados.add(discordId);
 
   const ch = await client.channels.fetch(WL_CHANNEL_ID);
 
   const embed = new EmbedBuilder()
     .setTitle('📄 Nueva Whitelist')
-    .setDescription(respuestas.map((r,i)=>`**${i+1}.** ${r}`).join('\n\n'))
+    .setDescription(respuestas.map((r, i) => `**${i+1}.** ${r}`).join('\n\n'))
     .setColor('#FFD700');
 
   const row = new ActionRowBuilder().addComponents(
@@ -88,13 +119,12 @@ app.post('/wl-form', async (req, res) => {
 
   // Mensaje fuera del embed
   await ch.send({ content: `<@${discordId}> envió su WL 🎉` });
-
   await ch.send({ embeds: [embed], components: [row] });
 
-  res.json({ ok:true });
+  res.json({ ok: true });
 });
 
-// Botones aceptar/rechazar
+// --- BOTONES ACCEPT / REJECT ---
 client.on(Events.InteractionCreate, async i => {
   if (!i.isButton()) return;
   const [act, id] = i.customId.split('_');
@@ -112,10 +142,8 @@ client.on(Events.InteractionCreate, async i => {
       .setColor('#00FF00');
 
     await ch.send({ embeds: [embed] });
-
-    // DM al usuario
-    try { await member.send({ content: `🎉 ¡Felicidades! Tu WL ha sido aceptada en La Piña RP`, embeds: [embed] }); }
-    catch(err){ console.log('No se pudo enviar DM al usuario', err); }
+    try { await member.send({ content: `🎉 ¡Felicidades! Tu WL ha sido aceptada en La Piña RP`, embeds: [embed] }); } 
+    catch(e){ console.log('No se pudo enviar DM', e); }
 
   } else if (act === 'reject') {
     await member.roles.add(ROLE_REJECTED);
@@ -127,9 +155,8 @@ client.on(Events.InteractionCreate, async i => {
       .setColor('#FF0000');
 
     await ch.send({ embeds: [embed] });
-
     try { await member.send({ content: `😢 Lo sentimos, tu WL ha sido rechazada en La Piña RP`, embeds: [embed] }); }
-    catch(err){ console.log('No se pudo enviar DM al usuario', err); }
+    catch(e){ console.log('No se pudo enviar DM', e); }
   }
 
   await i.update({ components: [] });
