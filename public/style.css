@@ -1,61 +1,62 @@
-body {
-  background: #121212;
-  color: #fff;
+* {
+  box-sizing: border-box;
   font-family: Arial, sans-serif;
-  margin:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
 }
 
-.carta {
-  background: #1c1c1c;
-  border-radius: 15px;
-  border: 3px solid;
-  border-image: linear-gradient(45deg, #FFD700, #FFA500) 1;
-  padding: 30px;
-  width: 600px;
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #ff9900, #ff6600);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.card {
+  background: rgba(0,0,0,0.6);
+  margin: auto;
+  padding: 20px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
   text-align: center;
 }
 
-.carta img {
-  display:block;
-  margin: 0 auto 20px auto;
-  max-width:150px;
-}
-
-#instrucciones {
-  margin-bottom: 20px;
-  color: #fff;
-}
-
-#barraContainer {
-  background:#333;
-  border-radius:10px;
-  overflow:hidden;
-  margin:10px 0;
-  height:20px;
-}
-
-#barra {
-  background: linear-gradient(90deg, #FFD700, #FFA500);
-  height:100%;
-  width:0%;
-  transition: width 0.5s;
+.logo {
+  width: 120px;
+  margin-bottom: 10px;
 }
 
 button {
-  padding: 10px 20px;
-  border:none;
+  background: #ff9900;
+  border: none;
+  padding: 10px;
   border-radius: 8px;
-  background: #FFD700;
-  color:#000;
-  cursor:pointer;
-  font-weight:bold;
+  cursor: pointer;
 }
 
-button:disabled {
-  background: #555;
-  cursor:not-allowed;
+.progress {
+  background: #333;
+  height: 8px;
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.bar {
+  height: 100%;
+  width: 0%;
+  background: #00ff99;
+}
+
+input, textarea {
+  width: 100%;
+  margin: 5px 0;
+  padding: 8px;
+}
+
+footer {
+  text-align: center;
+  padding: 10px;
+  font-size: 12px;
 }
