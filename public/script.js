@@ -1,121 +1,66 @@
-const app = document.getElementById("app");
+// Formulario paso a paso con barra de progreso
+const formContainer = document.getElementById('form-container');
+if(formContainer){
+  const preguntas = [
+    "¿Qué es el MetaGaming (MG)?",
+    "Si mueres y reapareces en el hospital (PK), ¿qué debes hacer?",
+    "¿Qué es el PowerGaming (PG)?",
+    "Te están atracando con un arma en la cabeza. ¿Cómo actúas?",
+    "¿Qué significa OOC (Out Of Character)?",
+    "¿Qué es el VDM (Vehicle Deathmatch)?",
+    "¿Cuál es el procedimiento si ves a alguien incumpliendo las normas?",
+    "¿Qué es el Combat Logging?",
+    "¿Qué es el Bunny Jump?",
+    "¿Está permitido hablar de temas de la vida real por el chat de voz?",
+    "¿Qué es el RDM (Random Deathmatch)?",
+    "¿Qué significa valorar la vida?"
+  ];
 
-let current = 0;
-const respuestas = [];
-let tiempo = 900; // 15 minutos
-let timerInterval;
-let wlStarted = false;
+  let current = 0;
+  const respuestas = [];
+  const discordId = document.getElementById('formulario').dataset.discordid;
+  const timerEl = document.getElementById('timer');
+  let tiempo = 900;
+  let timerInterval = setInterval(()=>{
+    if(tiempo<=0){ clearInterval(timerInterval); formContainer.innerHTML="<p>⏰ Tiempo expirado</p>"; return; }
+    let min = Math.floor(tiempo/60);
+    let sec = tiempo%60;
+    timerEl.innerText = "Tiempo restante: "+min.toString().padStart(2,'0')+":"+sec.toString().padStart(2,'0');
+    tiempo--;
+  },1000);
 
-// Cancelar WL si refresca o cambia de pestaña
-window.addEventListener("beforeunload", e=>{
-  if(wlStarted){
-    e.preventDefault();
-    e.returnValue = '';
+  const startBtn = document.getElementById('startBtn');
+  startBtn.onclick = ()=> showPregunta();
+
+  function showPregunta(){
+    const progress = Math.floor(current/preguntas.length*100);
+    formContainer.innerHTML = `
+      <div id="progress-bar" style="height:10px;width:100%;background:#222;border-radius:5px;margin-bottom:10px;">
+        <div style="height:10px;width:${progress}%;background:linear-gradient(90deg,#FFD700,#e6c200);border-radius:5px;"></div>
+      </div>
+      <div>${preguntas[current]}</div>
+      <input type="text" id="answer"/>
+      <button id="nextBtn">Listo</button>
+    `;
+    document.getElementById('nextBtn').onclick = ()=>{
+      const val = document.getElementById('answer').value.trim();
+      if(!val){ alert("Debes responder"); return; }
+      respuestas.push(val);
+      current++;
+      if(current<preguntas.length) showPregunta();
+      else enviarWL();
+    };
   }
-});
 
-// --- Mostrar formulario paso a paso ---
-function startWL(){
-  wlStarted = true;
-  app.innerHTML = `
-    <div class="card">
-      <img src="/logo.png" class="logo">
-      <div id="timer">Tiempo restante: 15:00</div>
-      <div class="progress-container"><div class="progress-bar" id="progress"></div></div>
-      <div class="question" id="question"></div>
-      <input type="text" id="answer" placeholder="Escribe tu respuesta...">
-      <button class="btn" id="nextBtn">Siguiente</button>
-      <div class="footer">© 2025 La Piña RP</div>
-    </div>
-  `;
-  timerInterval = setInterval(updateTimer, 1000);
-  showQuestion();
-}
-
-function updateTimer(){
-  if(tiempo<=0){
+  async function enviarWL(){
+    formContainer.innerHTML="<p>Enviando WL...</p>";
     clearInterval(timerInterval);
-    app.innerHTML = "<h1>⏰ Tiempo expirado</h1>";
-    return;
-  }
-  let min = Math.floor(tiempo/60);
-  let sec = tiempo%60;
-  document.getElementById("timer").innerText = `Tiempo restante: ${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  tiempo--;
-}
-
-function showQuestion(){
-  document.getElementById("question").innerText = preguntas[current];
-  document.getElementById("answer").value = "";
-  document.getElementById("nextBtn").onclick = nextQuestion;
-  updateProgress();
-}
-
-function nextQuestion(){
-  const val = document.getElementById("answer").value.trim();
-  if(!val){ alert("Debes responder"); return; }
-  respuestas.push(val);
-  current++;
-  if(current<preguntas.length){
-    showQuestion();
-  }else{
-    submitWL();
-  }
-}
-
-function updateProgress(){
-  const bar = document.getElementById("progress");
-  bar.style.width = `${Math.round((current/preguntas.length)*100)}%`;
-}
-
-// --- Enviar WL ---
-async function submitWL(){
-  clearInterval(timerInterval);
-  app.innerHTML = "<div class='card'><p>Enviando WL...</p></div>";
-  try{
-    const res = await fetch("/wl-form", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ discordId, respuestas })
+    const res = await fetch('/wl-form',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({discordId,respuestas})
     });
     const data = await res.json();
-    if(data.status === "already"){
-      app.innerHTML = `
-        <div class="card">
-          <img src="/logo.png" class="logo">
-          <h1>WL ya completada</h1>
-          <p>Estado: <b>${data.result}</b></p>
-          <img src="${data.gif}" style="width:200px;margin-top:15px;">
-          <div class="footer">© 2025 La Piña RP</div>
-        </div>
-      `;
-    } else if(data.status === "ok"){
-      app.innerHTML = `
-        <div class="card">
-          <img src="/logo.png" class="logo">
-          <h1>✅ WL enviada correctamente</h1>
-          <p>Espera a que el staff la revise.</p>
-          <div class="footer">© 2025 La Piña RP</div>
-        </div>
-      `;
-    } else {
-      app.innerHTML = "<h1>❌ Error</h1>";
-    }
-  }catch(err){
-    console.error(err);
-    app.innerHTML = "<h1>❌ Error interno</h1>";
+    formContainer.innerHTML = `<p>${data.status==='ok'?'✅ WL enviada con éxito!':'❌ Error al enviar'}</p>`;
   }
 }
-
-// --- Mostrar botón iniciar si es la primera vez ---
-app.innerHTML = `
-  <div class="card">
-    <img src="/logo.png" class="logo">
-    <h1>WL Formulario - ${username}</h1>
-    <div class="instructions">Presiona "Comenzar" para iniciar la WL</div>
-    <button class="btn" id="startBtn">Comenzar</button>
-    <div class="footer">© 2025 La Piña RP</div>
-  </div>
-`;
-
-document.getElementById("startBtn").onclick = startWL;
