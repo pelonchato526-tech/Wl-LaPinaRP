@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instrucciones WL</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="Logo LaPinaRP">
+  <h1>Bienvenido a la WL</h1>
+</header>
+<div class="card">
+  <p>Lee atentamente las instrucciones antes de comenzar:</p>
+  <ul>
+    <li>Completa las 12 preguntas de la WL.</li>
+    <li>Tienes un máximo de 3 intentos.</li>
+    <li>Si cambias de pestaña mientras contestas, se cancelará automáticamente un intento.</li>
+    <li>Al enviar tu WL, recibirás la confirmación en Discord.</li>
+    <li>Si es rechazada, solo recibirás otra oportunidad mediante un DM de Discord.</li>
+  </ul>
+  <button id="startBtn">Comenzar WL</button>
+</div>
+<script>
+document.getElementById("startBtn").addEventListener("click", () => {
+  window.location.href = "/form.html";
+});
+</script>
+</body>
+</html>
