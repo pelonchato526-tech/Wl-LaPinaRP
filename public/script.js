@@ -1,4 +1,3 @@
-const startBtn = document.getElementById('startBtn');
 const app = document.getElementById('app');
 
 const preguntas = [
@@ -21,41 +20,39 @@ let respuestas = [];
 let tiempo = 900;
 let timerInterval;
 
-startBtn.onclick = () => {
-  showQuestion();
+function startForm(discordId){
+  showQuestion(discordId);
   timerInterval = setInterval(()=>{
     tiempo--;
     if(tiempo<=0){ clearInterval(timerInterval); app.innerHTML="<h2>⏰ Tiempo agotado</h2>"; return; }
   },1000);
-};
+}
 
-function showQuestion(){
+function showQuestion(discordId){
   app.innerHTML = `
-    <div class="progress-bar">
-      <div class="progress" style="width:${(index/preguntas.length)*100}%"></div>
-    </div>
+    <div class="logo-container"><img src="/logo.png" class="logo"></div>
+    <div class="progress-bar"><div class="progress" style="width:${(index/preguntas.length)*100}%"></div></div>
     <h2>${preguntas[index]}</h2>
     <textarea id="answer" placeholder="Escribe tu respuesta"></textarea>
     <button id="nextBtn">Listo</button>
   `;
-  document.getElementById('nextBtn').onclick = next;
+  document.getElementById('nextBtn').onclick = ()=>next(discordId);
 }
 
-async function next(){
+async function next(discordId){
   const val = document.getElementById('answer').value.trim();
   if(!val) return alert('Debes responder la pregunta');
   respuestas.push(val);
   index++;
   if(index < preguntas.length){
-    showQuestion();
-  }else{
-    await submitWL();
+    showQuestion(discordId);
+  } else {
+    await submitWL(discordId);
   }
 }
 
-async function submitWL(){
+async function submitWL(discordId){
   app.innerHTML = "<h2>Enviando WL...</h2>";
-  const discordId = "TU_DISCORD_ID"; // reemplazar con variable de OAuth
   const res = await fetch('/wl-form',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
