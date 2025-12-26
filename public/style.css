@@ -1,7 +1,6 @@
 /* style.css */
-
-/* Reset y base */
 * { box-sizing: border-box; margin:0; padding:0; }
+
 body {
   background: radial-gradient(circle at top, #111 0%, #000 60%);
   color: #fff;
@@ -76,7 +75,7 @@ textarea:focus, input:focus { outline:none; border-color:#FFD700; }
 
 .footer { margin-top:25px; text-align:center; font-size:13px; opacity:0.5; }
 
-/* Barra de progreso tipo Montunos */
+/* Barra de progreso */
 #progress-container {
   width: 100%;
   height: 12px;
