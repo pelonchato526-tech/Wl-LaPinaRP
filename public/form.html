@@ -3,17 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <title>WL Piña RP</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div class="card" id="app">
-  <img id="logo" src="logo.png" alt="Piña RP"/>
-  <h1>WL Formulario</h1>
-  <p id="instructions">Presiona "Comenzar" para iniciar el formulario. Hasta 3 intentos si se cancela.</p>
-  <div id="timer">Tiempo restante: 15:00</div>
-  <button id="startBtn">Comenzar</button>
-  <div id="progressBar"><div id="fill"></div></div>
-</div>
-<script src="script.js"></script>
+  <div class="card">
+    <img id="logo" src="/logo.png" alt="Logo Piña RP">
+    <h2 style="color:white;">Instrucciones</h2>
+    <p style="color:white;">
+      Lee cuidadosamente cada pregunta antes de responder.<br>
+      Tienes máximo 3 intentos para completar la WL.<br>
+      Cambiar de pestaña o refrescar cancela un intento.<br>
+      Una vez respondida, no podrás enviar otra WL hasta nuevo intento disponible.
+    </p>
+    <div id="wl-form-container">
+      <!-- Aquí se genera el formulario dinámicamente con script.js -->
+    </div>
+  </div>
+  <script src="/script.js"></script>
 </body>
 </html>
