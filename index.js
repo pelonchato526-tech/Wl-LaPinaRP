@@ -3,142 +3,166 @@ const path = require("path");
 const {
   Client,
   GatewayIntentBits,
+  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder
+  Events
 } = require("discord.js");
 
 const app = express();
-app.use(express.json());
-app.use(express.static("public"));
 
-/* =========================
-   DISCORD BOT
-========================= */
+/* ===== ENV ===== */
+const {
+  CLIENT_ID,
+  CLIENT_SECRET,
+  DISCORD_TOKEN,
+  GUILD_ID,
+  WL_CHANNEL_ID,
+  RESULT_CHANNEL_ID,
+  ROLE_ACCEPTED,
+  ROLE_REJECTED,
+  PORT = 3000
+} = process.env;
 
+/* ===== MEMORIA ===== */
+const wlState = new Map(); 
+// discordId => { status: "none|sent|accepted|rejected", attempts: number }
+
+/* ===== DISCORD ===== */
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers
+  ]
 });
 
+client.login(DISCORD_TOKEN);
 client.once("ready", () => {
-  console.log("🤖 Bot conectado");
+  console.log("🤖 Bot listo:", client.user.tag);
 });
 
-client.login(process.env.BOT_TOKEN);
+/* ===== EXPRESS ===== */
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
 
-/* =========================
-   OAUTH CALLBACK
-========================= */
+app.get("/", (_, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
+});
 
+/* ===== OAUTH CALLBACK ===== */
 app.get("/callback", async (req, res) => {
-  const code = req.query.code;
-  if (!code) return res.send("❌ Error OAuth");
-
-  res.redirect("/form.html");
-});
-
-/* =========================
-   ENVIAR WL A DISCORD
-========================= */
-
-app.post("/send-wl", async (req, res) => {
   try {
-    const { discordId, respuestas } = req.body;
+    const code = req.query.code;
+    if (!code) return res.status(400).send("No code");
 
-    const channel = await client.channels.fetch(process.env.RESULT_CHANNEL_ID);
-
-    const embed = new EmbedBuilder()
-      .setTitle("📄 Nueva WL enviada")
-      .setColor(0xffd000)
-      .setDescription(
-        respuestas.map((r, i) => `**${i + 1}.** ${r}`).join("\n")
-      )
-      .setFooter({ text: "Estado: Pendiente" });
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`accept:${discordId}`)
-        .setLabel("✅ Aceptar")
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`reject:${discordId}`)
-        .setLabel("❌ Rechazar")
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    await channel.send({
-      content: `<@${discordId}> envió su WL:`,
-      embeds: [embed],
-      components: [row]
+    const params = new URLSearchParams({
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: "https://wl-discord.onrender.com/callback"
     });
 
-    res.json({ ok: true });
+    const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params
+    });
+    const token = await tokenRes.json();
+
+    const userRes = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${token.access_token}` }
+    });
+    const user = await userRes.json();
+
+    if (!wlState.has(user.id)) {
+      wlState.set(user.id, { status: "none", attempts: 0 });
+    }
+
+    res.redirect(`/form.html?uid=${user.id}&name=${user.username}`);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ ok: false });
+    res.status(500).send("Error interno");
   }
 });
 
-/* =========================
-   BOTONES
-========================= */
+/* ===== ENVIAR WL ===== */
+app.post("/submit", async (req, res) => {
+  const { discordId, answers } = req.body;
+  const state = wlState.get(discordId);
 
-client.on("interactionCreate", async interaction => {
-  if (!interaction.isButton()) return;
+  if (!state) return res.json({ error: "No autorizado" });
+  if (state.status === "sent") return res.json({ error: "Ya enviaste WL" });
+  if (state.attempts >= 3) return res.json({ error: "Sin intentos" });
 
-  const [action, userId] = interaction.customId.split(":");
+  state.status = "sent";
+  state.attempts++;
 
-  const gifAccept =
-    "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMGowbHhkaXJyeXcwanFjenNnbTV4ZTZhaGViMjN1cXIyODk2emcwNyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/RGxQHSsRUP753rvYHs/giphy.gif";
+  const channel = await client.channels.fetch(WL_CHANNEL_ID);
 
-  const gifReject =
-    "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGxiZzhnaXU1czFqMWVjNjNxNzVnMnB0N2VpdTdmNndlbHh6d2U1eiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2iD1cNf6tslgWDLn6n/giphy.gif";
+  await channel.send(`<@${discordId}> envió su WL:`);
 
-  if (action === "accept") {
-    const embed = EmbedBuilder.from(interaction.message.embeds[0])
-      .setTitle("✅ WL ACEPTADA")
-      .setColor(0x00ff00)
-      .setImage(gifAccept);
-
-    await interaction.update({ embeds: [embed], components: [] });
-
-    const user = await client.users.fetch(userId);
-    user.send({ embeds: [embed] });
-  }
-
-  if (action === "reject") {
-    const embed = EmbedBuilder.from(interaction.message.embeds[0])
-      .setTitle("❌ WL RECHAZADA")
-      .setColor(0xff0000)
-      .setImage(gifReject);
-
-    const retry = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`retry:${userId}`)
-        .setLabel("🔁 Dar otra oportunidad")
-        .setStyle(ButtonStyle.Secondary)
+  const embed = new EmbedBuilder()
+    .setTitle("📄 Nueva WL")
+    .setColor("#FFD700")
+    .setDescription(
+      answers.map((a, i) => `**${i + 1}.** ${a}`).join("\n")
     );
 
-    await interaction.update({ embeds: [embed], components: [retry] });
-  }
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`accept_${discordId}`)
+      .setLabel("Aceptar")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`reject_${discordId}`)
+      .setLabel("Rechazar")
+      .setStyle(ButtonStyle.Danger)
+  );
 
-  if (action === "retry") {
-    await interaction.reply({
-      content: "🔁 Se te dio otra oportunidad para hacer la WL.",
-      ephemeral: true
-    });
-
-    const user = await client.users.fetch(userId);
-    user.send("🔁 Tenés otra oportunidad para hacer la whitelist en la web.");
-  }
+  await channel.send({ embeds: [embed], components: [row] });
+  res.json({ ok: true });
 });
 
-/* =========================
-   SERVER
-========================= */
+/* ===== BOTONES ===== */
+client.on(Events.InteractionCreate, async (i) => {
+  if (!i.isButton()) return;
+  const [action, id] = i.customId.split("_");
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("🌐 Web corriendo en puerto", PORT);
+  const guild = await client.guilds.fetch(GUILD_ID);
+  const member = await guild.members.fetch(id).catch(() => null);
+  if (!member) return;
+
+  const state = wlState.get(id);
+  if (!state) return;
+
+  const resultEmbed = new EmbedBuilder()
+    .setColor(action === "accept" ? "#00ff00" : "#ff0000")
+    .setTitle(action === "accept" ? "✅ WL Aceptada" : "❌ WL Rechazada")
+    .setImage(
+      action === "accept"
+        ? "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMGowbHhkaXJyeXcwanFjenNnbTV4ZTZhaGViMjN1cXIyODk2emcwNyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/RGxQHSsRUP753rvYHs/giphy.gif"
+        : "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGxiZzhnaXU1czFqMWVjNjNxNzVnMnB0N2VpdTdmNndlbHh6d2U1eiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2iD1cNf6tslgWDLn6n/giphy.gif"
+    );
+
+  if (action === "accept") {
+    state.status = "accepted";
+    await member.roles.add(ROLE_ACCEPTED);
+  } else {
+    state.status = "rejected";
+    await member.roles.add(ROLE_REJECTED);
+  }
+
+  const resultChannel = await client.channels.fetch(RESULT_CHANNEL_ID);
+  await resultChannel.send({
+    content: `<@${id}>`,
+    embeds: [resultEmbed]
+  });
+
+  await member.send({ embeds: [resultEmbed] }).catch(() => {});
+
+  await i.update({ components: [] });
 });
+
+app.listen(PORT, () => console.log("🌐 Web en puerto", PORT));
