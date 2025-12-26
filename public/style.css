@@ -1,78 +1,61 @@
-@keyframes gradientBorder {
-  0% { border-image-source: linear-gradient(45deg, #FFD700, #FFA500); }
-  50% { border-image-source: linear-gradient(45deg, #FFA500, #FFD700); }
-  100% { border-image-source: linear-gradient(45deg, #FFD700, #FFA500); }
-}
-
-@keyframes gradientBar {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
 body {
-  background: #000;
+  background: #121212;
+  color: #fff;
   font-family: Arial, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
+  margin:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
 }
 
-.card {
-  background: #111;
-  border: 4px solid;
-  border-image-slice: 1;
-  border-image-source: linear-gradient(45deg, #FFD700, #FFA500);
+.carta {
+  background: #1c1c1c;
   border-radius: 15px;
+  border: 3px solid;
+  border-image: linear-gradient(45deg, #FFD700, #FFA500) 1;
   padding: 30px;
+  width: 600px;
   text-align: center;
-  width: 480px;
-  animation: gradientBorder 3s linear infinite;
 }
 
-#logo {
-  width: 150px;
-  display: block;
-  margin: 0 auto 20px;
+.carta img {
+  display:block;
+  margin: 0 auto 20px auto;
+  max-width:150px;
 }
 
-h1 { margin-bottom: 15px; color: #FFD700; }
+#instrucciones {
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+#barraContainer {
+  background:#333;
+  border-radius:10px;
+  overflow:hidden;
+  margin:10px 0;
+  height:20px;
+}
+
+#barra {
+  background: linear-gradient(90deg, #FFD700, #FFA500);
+  height:100%;
+  width:0%;
+  transition: width 0.5s;
+}
 
 button {
-  padding: 12px 25px;
+  padding: 10px 20px;
+  border:none;
+  border-radius: 8px;
   background: #FFD700;
-  color: #000;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 18px;
-  margin-top: 15px;
+  color:#000;
+  cursor:pointer;
+  font-weight:bold;
 }
 
-button:hover { background: #e6c200; }
-
-#progressBar {
-  width: 100%;
-  height: 20px;
-  background: #333;
-  border-radius: 10px;
-  margin-top: 20px;
-  overflow: hidden;
-}
-
-#fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
-  background-size: 200% 100%;
-  animation: gradientBar 3s linear infinite;
-  transition: width 0.3s ease;
-}
-
-#timer {
-  margin-top: 15px;
-  color: #FFD700;
-  font-size: 18px;
+button:disabled {
+  background: #555;
+  cursor:not-allowed;
 }
