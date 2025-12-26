@@ -34,8 +34,8 @@ const preguntas = [
   "¿Qué significa 'Valorar la vida'?"
 ];
 
-// Usuarios con estado
-const wlUsers = new Map();
+const wlUsers = new Map();  // Estado de usuarios
+const wlCancelLimit = 3;    // Máximo 3 cancelaciones
 
 // --- Inicio ---
 app.get('/', (req,res)=>{
@@ -51,6 +51,7 @@ app.get('/', (req,res)=>{
         <img src="/logo.png" id="logo" />
         <h1>La Piña RP - Whitelist</h1>
         <p>Lee cuidadosamente las instrucciones antes de comenzar tu WL.</p>
+        <p>Solo tienes 3 oportunidades si cancelas o cambias de pestaña.</p>
         <a href="${oauthLink}"><button class="btn">Conectar con Discord y Comenzar</button></a>
       </div>
     </body>
@@ -84,11 +85,8 @@ app.get('/callback', async (req,res)=>{
     const discordId = userData.id;
     const username = userData.username;
 
-    // Revisar si ya envió WL
     const estado = wlUsers.get(discordId);
-    if(estado){
-      return res.send(`<h2>Tu WL ya fue enviada y tu estado es: ${estado.status || "Pendiente"}</h2>`);
-    }
+    if(estado && estado.status) return res.send(`<h2>Tu WL ya fue enviada. Estado: ${estado.status}</h2>`);
 
     res.send(`
       <html>
@@ -100,31 +98,52 @@ app.get('/callback', async (req,res)=>{
         <div class="card gradient-border" id="wlCard">
           <img src="/logo.png" id="logo"/>
           <h1>Whitelist - ${username}</h1>
-          <p>Solo puedes enviar tu WL una vez. Presiona "Comenzar" para iniciar.</p>
+          <p>Solo puedes enviar tu WL una vez.</p>
+          <p>Si cancelas o cambias de pestaña, tendrás un máximo de 3 oportunidades.</p>
+          <p>Rellena todas las preguntas correctamente y presiona "Listo".</p>
+          <div id="timer">Tiempo restante: 15:00</div>
           <button id="startBtn" class="btn">Comenzar</button>
           <div id="formContainer"></div>
         </div>
 
         <script>
           const preguntas = ${JSON.stringify(preguntas)};
-          let current=0, respuestas=[];
+          let current=0, respuestas=[], wlCancelled=false, cancelCount=0;
           const discordId="${discordId}";
-          const container = document.getElementById('formContainer');
-          const startBtn = document.getElementById('startBtn');
-          let wlCancelled=false;
+          const container=document.getElementById('formContainer');
+          const startBtn=document.getElementById('startBtn');
+          const timerEl=document.getElementById('timer');
+          let tiempo=900; // 15 minutos
+          let timerInterval;
 
-          // Detectar cambio de pestaña o refresh
-          window.addEventListener('blur', ()=>{ wlCancelled=true; container.innerHTML="<p>⚠️ WL cancelada por cambio de pestaña.</p>"; });
-          window.addEventListener('beforeunload', ()=>{ localStorage.setItem('wlCancelled', 'true'); });
+          // --- Contador ---
+          function startTimer(){
+            timerInterval=setInterval(()=>{
+              if(tiempo<=0){ clearInterval(timerInterval); container.innerHTML="<p>⏰ Tiempo expirado</p>"; return; }
+              let min=Math.floor(tiempo/60);
+              let sec=tiempo%60;
+              timerEl.innerText="Tiempo restante: "+min.toString().padStart(2,'0')+":"+sec.toString().padStart(2,'0');
+              tiempo--;
+            },1000);
+          }
 
-          startBtn.onclick = ()=>{
-            if(localStorage.getItem('wlCancelled')==='true'){ container.innerHTML="<p>⚠️ WL cancelada anteriormente. Vuelve a intentarlo.</p>"; return; }
-            showQuestion(); startBtn.style.display='none';
+          // --- Detectar cambio de pestaña ---
+          window.addEventListener('blur', ()=>{
+            cancelCount++;
+            if(cancelCount>3){ container.innerHTML="<p>⚠️ Has superado el máximo de cancelaciones.</p>"; startBtn.disabled=true; return; }
+            container.innerHTML="<p>⚠️ WL cancelada por cambio de pestaña. Oportunidades restantes: "+(3-cancelCount)+"</p>";
+          });
+
+          startBtn.onclick=()=>{
+            if(cancelCount>=3){ container.innerHTML="<p>⚠️ Has superado el máximo de cancelaciones.</p>"; return; }
+            startBtn.style.display='none';
+            startTimer();
+            showQuestion();
           };
 
           function showQuestion(){
             if(current>=preguntas.length){ submitWL(); return; }
-            container.innerHTML = \`
+            container.innerHTML=\`
               <p>\${preguntas[current]}</p>
               <input type="text" id="answer"/>
               <button onclick="nextQuestion()">Listo</button>
@@ -135,20 +154,24 @@ app.get('/callback', async (req,res)=>{
           function nextQuestion(){
             const val=document.getElementById('answer').value.trim();
             if(!val){ alert("Debes responder"); return; }
-            respuestas.push(val); current++; showQuestion();
+            respuestas.push(val); 
+            current++; 
+            showQuestion();
+            // actualizar barra
+            document.querySelector('.progress-fill').style.width=Math.floor(current/preguntas.length*100)+'%';
           }
 
           async function submitWL(){
             container.innerHTML="<p>Enviando WL...</p>";
-            const res = await fetch('/wl-form',{
+            clearInterval(timerInterval);
+            const res=await fetch('/wl-form',{
               method:'POST',
               headers:{'Content-Type':'application/json'},
               body:JSON.stringify({discordId,respuestas})
             });
-            const data = await res.json();
+            const data=await res.json();
             if(data.status==='ok'){
               container.innerHTML="<h2>✅ WL enviada con éxito!</h2>";
-              localStorage.setItem('wlSent', 'true');
             }else{
               container.innerHTML="<h2>❌ Error al enviar WL</h2>";
             }
@@ -169,20 +192,20 @@ app.post('/wl-form', async (req,res)=>{
   try{
     const {discordId,respuestas} = req.body;
     if(!discordId || !respuestas) return res.status(400).json({error:'Faltan datos'});
-    if(wlUsers.has(discordId)) return res.json({status:'ok'}); 
+    if(wlUsers.has(discordId) && wlUsers.get(discordId).status) return res.json({status:'ok'}); 
 
-    wlUsers.set(discordId, {respuestas, status:null}); 
+    wlUsers.set(discordId,{respuestas, status:null});
 
-    const wlChannel = await client.channels.fetch(WL_CHANNEL_ID);
+    const wlChannel=await client.channels.fetch(WL_CHANNEL_ID);
     await wlChannel.send(`<@${discordId}> envió su WL:`);
 
-    const embed = new EmbedBuilder()
+    const embed=new EmbedBuilder()
       .setTitle('📄 Nueva WL enviada')
       .setDescription(respuestas.map((r,i)=>`\n**Pregunta ${i+1}:** ${r}`).join(''))
       .setColor('#FFD700')
       .setThumbnail('https://i.imgur.com/tuLogo.png');
 
-    const row = new ActionRowBuilder()
+    const row=new ActionRowBuilder()
       .addComponents(
         new ButtonBuilder().setCustomId(`accept_${discordId}`).setLabel('✅ Aceptar').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId(`reject_${discordId}`).setLabel('❌ Rechazar').setStyle(ButtonStyle.Danger)
@@ -199,13 +222,13 @@ app.post('/wl-form', async (req,res)=>{
 // --- Bot Discord ---
 client.on(Events.InteractionCreate, async interaction=>{
   if(!interaction.isButton()) return;
-  const [action, discordId] = interaction.customId.split('_');
-  const guild = await client.guilds.fetch(GUILD_ID);
-  const member = await guild.members.fetch(discordId).catch(()=>null);
+  const [action, discordId]=interaction.customId.split('_');
+  const guild=await client.guilds.fetch(GUILD_ID);
+  const member=await guild.members.fetch(discordId).catch(()=>null);
   if(!member) return;
-  const resultChannel = await client.channels.fetch(RESULT_CHANNEL_ID);
+  const resultChannel=await client.channels.fetch(RESULT_CHANNEL_ID);
 
-  let embed = new EmbedBuilder()
+  let embed=new EmbedBuilder()
     .setTitle(action==='accept'?'✅ WL Aceptada':'❌ WL Rechazada')
     .setDescription(`<@${discordId}> ${action==='accept'?'fue aceptado':'fue rechazado'} a La Piña RP!`)
     .setColor(action==='accept'?'#00FF00':'#FF0000');
