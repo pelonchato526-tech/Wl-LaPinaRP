@@ -14,6 +14,7 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const GUILD_ID = process.env.GUILD_ID;
 const WL_CHANNEL_ID = process.env.WL_CHANNEL_ID;
+const RESULT_CHANNEL_ID = process.env.RESULT_CHANNEL_ID;
 const PORT = process.env.PORT || 3000;
 
 const ROLE_ACCEPTED = '1453469378178846740';
@@ -37,13 +38,11 @@ const client = new Client({
 app.get('/', (req, res) => {
   res.send(`
     <html>
-      <head>
-        <title>La Piña RP</title>
-      </head>
-      <body>
+      <head><title>La Piña RP | Whitelist</title></head>
+      <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#000;color:#fff;font-family:sans-serif">
         <h1>Whitelist La Piña RP</h1>
         <a href="${OAUTH_URL}">
-          <button>Conectar con Discord y Comenzar</button>
+          <button style="padding:15px 30px;font-size:20px;margin-top:20px;background:#FFD700;border:none;border-radius:8px;cursor:pointer">Conectar con Discord y Comenzar</button>
         </a>
       </body>
     </html>
@@ -77,10 +76,7 @@ app.get('/callback', async (req, res) => {
     });
     const user = await userRes.json();
 
-    // Guardar Discord ID en cookie
     res.cookie('discordId', user.id, { maxAge: 3600000, httpOnly: true });
-
-    // Redirigir al formulario WL
     res.redirect('/wl');
   } catch (err) {
     console.error(err);
@@ -88,11 +84,10 @@ app.get('/callback', async (req, res) => {
   }
 });
 
-// --- RUTA WL (FORMULARIO) ---
+// --- RUTA WL ---
 app.get('/wl', (req, res) => {
   const discordId = req.cookies.discordId;
   if (!discordId) return res.redirect('/');
-
   res.sendFile(__dirname + '/public/index.html');
 });
 
@@ -105,11 +100,12 @@ app.post('/wl-form', async (req, res) => {
   if (enviados.has(discordId)) return res.json({ ok: false, mensaje: 'Ya enviaste la WL' });
   enviados.add(discordId);
 
-  const ch = await client.channels.fetch(WL_CHANNEL_ID);
+  const wlCh = await client.channels.fetch(WL_CHANNEL_ID);
+  const resultCh = await client.channels.fetch(RESULT_CHANNEL_ID);
 
   const embed = new EmbedBuilder()
     .setTitle('📄 Nueva Whitelist')
-    .setDescription(respuestas.map((r, i) => `**${i+1}.** ${r}`).join('\n\n'))
+    .setDescription(respuestas.map((r,i)=>`**${i+1}.** ${r}`).join('\n\n'))
     .setColor('#FFD700');
 
   const row = new ActionRowBuilder().addComponents(
@@ -117,22 +113,26 @@ app.post('/wl-form', async (req, res) => {
     new ButtonBuilder().setCustomId(`reject_${discordId}`).setLabel('Rechazar').setStyle(ButtonStyle.Danger)
   );
 
-  // Mensaje fuera del embed
-  await ch.send({ content: `<@${discordId}> envió su WL 🎉` });
-  await ch.send({ embeds: [embed], components: [row] });
+  // Mensaje fuera de embed en WL_CHANNEL
+  await wlCh.send({ content: `<@${discordId}> envió su WL 🎉` });
+  await wlCh.send({ embeds: [embed], components: [row] });
+
+  // Envío también al canal de resultados RESULT_CHANNEL_ID
+  await resultCh.send({ content: `<@${discordId}> envió su WL`, embeds:[embed] });
 
   res.json({ ok: true });
 });
 
-// --- BOTONES ACCEPT / REJECT ---
+// --- BOTONES ---
 client.on(Events.InteractionCreate, async i => {
   if (!i.isButton()) return;
-  const [act, id] = i.customId.split('_');
+  const [act,id] = i.customId.split('_');
   const guild = await client.guilds.fetch(GUILD_ID);
   const member = await guild.members.fetch(id);
-  const ch = await client.channels.fetch(WL_CHANNEL_ID);
+  const wlCh = await client.channels.fetch(WL_CHANNEL_ID);
+  const resultCh = await client.channels.fetch(RESULT_CHANNEL_ID);
 
-  if (act === 'accept') {
+  if(act==='accept'){
     await member.roles.add(ROLE_ACCEPTED);
 
     const embed = new EmbedBuilder()
@@ -141,11 +141,11 @@ client.on(Events.InteractionCreate, async i => {
       .setImage('https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnh3N3duYXA4OW0wMG1samVyZTUxdzk1ZWF2MGh6dHhrYWJ5MzBsMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/sOzVzt9IWu2ECjLVfF/giphy.gif')
       .setColor('#00FF00');
 
-    await ch.send({ embeds: [embed] });
-    try { await member.send({ content: `🎉 ¡Felicidades! Tu WL ha sido aceptada en La Piña RP`, embeds: [embed] }); } 
-    catch(e){ console.log('No se pudo enviar DM', e); }
+    await wlCh.send({ embeds:[embed] });
+    await resultCh.send({ embeds:[embed] });
+    try{ await member.send({ content:'🎉 ¡Felicidades! Tu WL ha sido aceptada en La Piña RP', embeds:[embed] }); }catch(e){}
 
-  } else if (act === 'reject') {
+  }else if(act==='reject'){
     await member.roles.add(ROLE_REJECTED);
 
     const embed = new EmbedBuilder()
@@ -154,13 +154,13 @@ client.on(Events.InteractionCreate, async i => {
       .setImage('https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2VveW9waW94OGFicmcyeGZzZDZ1cG4zb3Y5eXh2OTFyMTE3OGZuNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/bGtF6Y5QRjmvjqamoL/giphy.gif')
       .setColor('#FF0000');
 
-    await ch.send({ embeds: [embed] });
-    try { await member.send({ content: `😢 Lo sentimos, tu WL ha sido rechazada en La Piña RP`, embeds: [embed] }); }
-    catch(e){ console.log('No se pudo enviar DM', e); }
+    await wlCh.send({ embeds:[embed] });
+    await resultCh.send({ embeds:[embed] });
+    try{ await member.send({ content:'😢 Lo sentimos, tu WL ha sido rechazada en La Piña RP', embeds:[embed] }); }catch(e){}
   }
 
-  await i.update({ components: [] });
+  await i.update({ components:[] });
 });
 
 client.login(TOKEN);
-app.listen(PORT, () => console.log(`Servidor listo en puerto ${PORT}`));
+app.listen(PORT,()=>console.log(`Servidor listo en puerto ${PORT}`));
