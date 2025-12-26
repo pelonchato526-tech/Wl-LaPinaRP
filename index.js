@@ -1,15 +1,6 @@
-// index.js
 const express = require('express');
 const fetch = require('node-fetch');
-const {
-  Client,
-  GatewayIntentBits,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder,
-  Events
-} = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -22,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const ROLE_ACCEPTED = '1453469378178846740';
 const ROLE_REJECTED = '1453469439306760276';
 
-// OAuth FIJO (EL TUYO)
+// OAuth FIJO
 const OAUTH_URL =
   'https://discord.com/oauth2/authorize?client_id=1453271207490355284&response_type=code&redirect_uri=https%3A%2F%2Fwl-discord.onrender.com%2Fcallback&scope=identify+guilds+email+openid';
 
@@ -55,7 +46,7 @@ const preguntas = [
   "¿Qué significa valorar la vida?"
 ];
 
-// Página inicio
+// Página de inicio
 app.get('/', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -97,36 +88,28 @@ app.get('/', (req, res) => {
 app.get('/callback', async (req, res) => {
   try {
     const code = req.query.code;
-    if (!code) return res.send('❌ No se recibió código OAuth2');
+    if (!code) return res.send('❌ Error: no se recibió código OAuth2');
 
     const params = new URLSearchParams();
     params.append('client_id', '1453271207490355284');
     params.append('client_secret', CLIENT_SECRET);
     params.append('grant_type', 'authorization_code');
     params.append('code', code);
-    params.append(
-      'redirect_uri',
-      'https://wl-discord.onrender.com/callback'
-    );
+    params.append('redirect_uri', 'https://wl-discord.onrender.com/callback');
+    params.append('scope', 'identify guilds email openid');
 
-    const tokenRes = await fetch(
-      'https://discord.com/api/oauth2/token',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params
-      }
-    );
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    });
 
     const token = await tokenRes.json();
     if (token.error) return res.send('❌ Error OAuth2');
 
-    const userRes = await fetch(
-      'https://discord.com/api/users/@me',
-      {
-        headers: { Authorization: `Bearer ${token.access_token}` }
-      }
-    );
+    const userRes = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${token.access_token}` }
+    });
 
     const user = await userRes.json();
 
@@ -140,7 +123,7 @@ app.get('/callback', async (req, res) => {
     #logo { width:180px; margin:20px; }
     #timer { color:#FFD700; font-size:22px; }
     input { width:60%; padding:12px; font-size:18px; border-radius:8px; }
-    button { margin-top:20px; padding:12px 30px; font-size:20px; background:#FFD700; border:none; border-radius:8px; }
+    button { margin-top:20px; padding:12px 30px; font-size:20px; background:#FFD700; border:none; border-radius:8px; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -219,9 +202,7 @@ app.post('/wl-form', async (req, res) => {
 
   const embed = new EmbedBuilder()
     .setTitle('📄 Nueva Whitelist')
-    .setDescription(
-      respuestas.map((r,i)=>`**${i+1}.** ${r}`).join('\n\n')
-    )
+    .setDescription(respuestas.map((r,i)=>`**${i+1}.** ${r}`).join('\n\n'))
     .setColor('#FFD700');
 
   const row = new ActionRowBuilder().addComponents(
@@ -263,4 +244,4 @@ client.on(Events.InteractionCreate, async i => {
 });
 
 client.login(TOKEN);
-app.listen(PORT, () => console.log('Servidor listo'));
+app.listen(PORT, () => console.log(`Servidor listo en puerto ${PORT}`));
