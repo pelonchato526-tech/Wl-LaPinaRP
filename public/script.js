@@ -1,38 +1,54 @@
-let time = 300;
-let interval;
-let attempts = Number(localStorage.getItem("attempts") || 0);
+const params = new URLSearchParams(location.search);
+const uid = params.get("uid");
+const name = params.get("name");
 
-const startBtn = document.getElementById("start");
-const form = document.getElementById("form");
-const bar = document.getElementById("bar");
-const timeSpan = document.getElementById("time");
+if (!uid) document.body.innerHTML = "No autorizado";
 
-if (attempts >= 3) {
-  alert("Superaste el máximo de intentos.");
-  startBtn.disabled = true;
-}
+document.getElementById("user").innerText = name;
 
-startBtn.onclick = () => {
-  startBtn.hidden = true;
-  form.hidden = false;
+const questions = [
+  "¿Qué es MG?",
+  "¿Qué es PG?",
+  "¿Qué es RDM?",
+  "¿Qué es VDM?",
+  "¿Qué es valorar la vida?"
+];
 
-  interval = setInterval(() => {
-    time--;
-    timeSpan.textContent = time;
-    bar.style.width = `${((300 - time) / 300) * 100}%`;
+let i = 0;
+let answers = [];
+let time = 900;
 
-    if (time <= 0) cancel();
-  }, 1000);
+const q = document.getElementById("q");
+const a = document.getElementById("a");
+const p = document.getElementById("progress");
+const t = document.getElementById("timer");
+
+q.innerText = questions[i];
+
+setInterval(() => {
+  time--;
+  t.innerText = `Tiempo: ${Math.floor(time/60)}:${time%60}`;
+  if (time <= 0) location.reload();
+}, 1000);
+
+document.getElementById("next").onclick = async () => {
+  if (!a.value) return;
+  answers.push(a.value);
+  a.value = "";
+  i++;
+  p.style.width = `${(i / questions.length) * 100}%`;
+
+  if (i >= questions.length) {
+    const r = await fetch("/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ discordId: uid, answers })
+    });
+    const j = await r.json();
+    document.body.innerHTML = j.ok ? "WL enviada" : j.error;
+  } else {
+    q.innerText = questions[i];
+  }
 };
 
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) cancel();
-});
-
-function cancel() {
-  clearInterval(interval);
-  attempts++;
-  localStorage.setItem("attempts", attempts);
-  alert("Intento cancelado");
-  location.reload();
-}
+window.onblur = () => location.reload();
