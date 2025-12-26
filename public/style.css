@@ -1,26 +1,160 @@
-* { box-sizing: border-box; }
-body {
-  margin:0; font-family:'Segoe UI', sans-serif;
-  background: radial-gradient(circle at top, #111 0%, #000 60%);
-  color:#fff; min-height:100vh;
-  display:flex; justify-content:center; align-items:center;
+/* Reset básico */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
+
+/* Body */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #111 0%, #000 70%);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Card principal */
 .card {
-  width:95%; max-width:720px; background:#0c0c0c;
-  border-radius:18px; padding:30px;
-  box-shadow:0 0 40px rgba(255,215,0,0.08);
-  border:1px solid rgba(255,215,0,0.15);
+  width: 95%;
+  max-width: 720px;
+  background: #0c0c0c;
+  border-radius: 18px;
+  padding: 30px;
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.15);
   animation: fadeIn 0.6s ease;
 }
-@keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
-.logo { width:140px; display:block; margin:0 auto 15px; }
-h1 { text-align:center; color:#FFD700; margin-bottom:10px; font-size:34px; }
-.subtitle { text-align:center; opacity:0.8; margin-bottom:25px; font-size:16px; }
-.instructions { background:#111; border-left:4px solid #FFD700; padding:15px; border-radius:10px; margin-bottom:20px; line-height:1.6; font-size:15px; }
-.timer { text-align:center; font-size:18px; margin-bottom:15px; color:#FFD700; display:none; }
-.question { font-size:20px; margin-bottom:15px; text-align:center; }
-textarea { width:100%; min-height:110px; background:#0a0a0a; border:1px solid #333; border-radius:10px; padding:12px; color:#fff; font-size:16px; resize:none; }
-textarea:focus { outline:none; border-color:#FFD700; }
-.btn { width:100%; margin-top:20px; padding:14px; border-radius:12px; border:none; background:linear-gradient(135deg,#FFD700,#e6c200); color:#000; font-size:18px; font-weight:bold; cursor:pointer; }
-.btn:hover { filter:brightness(1.1); }
-.footer { margin-top:25px; text-align:center; font-size:13px; opacity:0.5; }
+
+/* Animación fadeIn */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo */
+.logo {
+  width: 140px;
+  margin: 0 auto 15px;
+  display: block;
+}
+
+/* Titulos */
+h1 {
+  text-align: center;
+  color: #FFD700;
+  margin-bottom: 10px;
+  font-size: 34px;
+}
+
+.subtitle {
+  text-align: center;
+  opacity: 0.8;
+  margin-bottom: 25px;
+  font-size: 16px;
+}
+
+/* Instrucciones */
+.instructions {
+  background: #111;
+  border-left: 4px solid #FFD700;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+/* Timer */
+.timer {
+  text-align: center;
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #FFD700;
+}
+
+/* Barra de progreso */
+.progress {
+  width: 100%;
+  height: 12px;
+  background: #222;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress::after {
+  content: '';
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: #FFD700;
+  transition: width 0.3s ease;
+}
+
+/* Pregunta */
+.question {
+  font-size: 20px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* Textarea */
+textarea {
+  width: 100%;
+  min-height: 110px;
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px;
+  color: #fff;
+  font-size: 16px;
+  resize: none;
+  transition: border-color 0.3s;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #FFD700;
+}
+
+/* Botón */
+.btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #FFD700, #e6c200);
+  color: #000;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, filter 0.2s;
+}
+
+.btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+/* Footer */
+.footer {
+  margin-top: 25px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.5;
+}
+
+/* Animaciones de entrada de pregunta */
+.question, textarea, .btn {
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
