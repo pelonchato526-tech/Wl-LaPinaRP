@@ -1,1 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>La Piña RP | Whitelist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at top, #111 0%, #000 60%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      width: 95%;
+      max-width: 720px;
+      background: #0c0c0c;
+      border-radius: 18px;
+      padding: 30px;
+      box-shadow: 0 0 40px rgba(255,215,0,0.08);
+      border: 1px solid rgba(255,215,0,0.15);
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      width: 140px;
+      margin: 0 auto 15px;
+      display: block;
+    }
+
+    h1 {
+      text-align: center;
+      color: #FFD700;
+      margin-bottom: 10px;
+      font-size: 34px;
+    }
+
+    .subtitle {
+      text-align: center;
+      opacity: 0.8;
+      margin-bottom: 25px;
+      font-size: 16px;
+    }
+
+    .instructions {
+      background: #111;
+      border-left: 4px solid #FFD700;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .timer {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #FFD700;
+      display: none;
+    }
+
+    .question {
+      font-size: 20px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 12px;
+      color: #fff;
+      font-size: 16px;
+      resize: none;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #FFD700;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, #FFD700, #e6c200);
+      color: #000;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .footer {
+      margin-top: 25px;
+      text-align: center;
+      font-size: 13px;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card" id="app">
+  <!-- CONTENIDO DINÁMICO -->
+</div>
+
+<script>
+  const preguntas = [
+    "¿Qué es el MetaGaming (MG)?",
+    "Si mueres y reapareces en el hospital (PK), ¿qué debes hacer?",
+    "¿Qué es el PowerGaming (PG)?",
+    "Te están atracando con un arma en la cabeza. ¿Cómo actúas?",
+    "¿Qué significa OOC (Out Of Character)?",
+    "¿Qué es el VDM (Vehicle Deathmatch)?",
+    "¿Cuál es el procedimiento si ves a alguien incumpliendo las normas?",
+    "¿Qué es el Combat Logging?",
+    "¿Qué es el Bunny Jump?",
+    "¿Está permitido hablar de temas de la vida real por el chat de voz?",
+    "¿Qué es el RDM (Random Deathmatch)?",
+    "¿Qué significa Valorar la vida?"
+  ];
+
+  let index = 0;
+  let respuestas = [];
+  let tiempo = 15 * 60;
+  let timerInterval;
+
+  const app = document.getElementById("app");
+
+  function pantallaInicio() {
+    app.innerHTML = `
+      <img src="/logo.png" class="logo">
+      <h1>La Piña RP</h1>
+      <div class="subtitle">Sistema Oficial de Whitelist</div>
+
+      <div class="instructions">
+        • Lee cuidadosamente cada pregunta.<br>
+        • Tienes <b>15 minutos</b> para completar la WL.<br>
+        • No podrás editar respuestas.<br>
+        • Solo puedes enviar la WL <b>una vez</b>.
+      </div>
+
+      <a href="/callback">
+        <button class="btn">Conectar con Discord y Comenzar</button>
+      </a>
+
+      <div class="footer">© 2025 La Piña RP · Todos los derechos reservados</div>
+    `;
+  }
+
+  function iniciarTimer() {
+    timerInterval = setInterval(() => {
+      tiempo--;
+      const min = String(Math.floor(tiempo / 60)).padStart(2, '0');
+      const sec = String(tiempo % 60).padStart(2, '0');
+      document.getElementById("timer").innerText = `⏳ Tiempo restante: ${min}:${sec}`;
+
+      if (tiempo <= 0) {
+        clearInterval(timerInterval);
+        app.innerHTML = "<h1>⛔ Tiempo agotado</h1>";
+      }
+    }, 1000);
+  }
+
+  function mostrarPregunta() {
+    if (index === 0) iniciarTimer();
+
+    app.innerHTML = `
+      <img src="/logo.png" class="logo">
+      <div class="timer" id="timer"></div>
+      <div class="question">${preguntas[index]}</div>
+      <textarea id="respuesta" placeholder="Escribe tu respuesta..."></textarea>
+      <button class="btn" onclick="siguiente()">Siguiente</button>
+      <div class="footer">© La Piña RP</div>
+    `;
+    document.getElementById("timer").style.display = "block";
+  }
+
+  function siguiente() {
+    const val = document.getElementById("respuesta").value.trim();
+    if (!val) return alert("Debes responder la pregunta");
+
+    respuestas.push(val);
+    index++;
+
+    if (index < preguntas.length) {
+      mostrarPregunta();
+    } else {
+      enviarWL();
+    }
+  }
+
+  async function enviarWL() {
+    clearInterval(timerInterval);
+    app.innerHTML = "<h1>📨 Enviando WL...</h1>";
+
+    await fetch("/wl-form", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ respuestas })
+    });
+
+    app.innerHTML = "<h1>✅ WL enviada correctamente</h1>";
+  }
+
+  pantallaInicio();
+</script>
+
+</body>
+</html>
